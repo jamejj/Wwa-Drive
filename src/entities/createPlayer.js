@@ -14,6 +14,19 @@ export function createPlayer() {
   const player = new THREE.Group();
   player.name = "Gracz";
 
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.48, 12),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false,
+    }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.025;
+  player.add(shadow);
+
   const legs = meshBox(0.65, 0.85, 0.35, 0x242d43);
   const torso = meshBox(0.9, 1.05, 0.48, 0xe3a41e);
   const head = new THREE.Mesh(

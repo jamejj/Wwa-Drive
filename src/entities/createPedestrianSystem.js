@@ -46,11 +46,23 @@ export function createPedestrianSystem({
   const torsos = new THREE.InstancedMesh(torsoGeometry, torsoMaterial, count);
   const legs = new THREE.InstancedMesh(legsGeometry, legsMaterial, count);
   const heads = new THREE.InstancedMesh(headGeometry, headMaterial, count);
+  const shadowGeometry = new THREE.CircleGeometry(0.44, 10);
+  shadowGeometry.rotateX(-Math.PI / 2);
+  const shadows = new THREE.InstancedMesh(
+    shadowGeometry,
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+    }),
+    count,
+  );
   torsos.name = "Tułowia pieszych";
   legs.name = "Nogi pieszych";
   heads.name = "Głowy pieszych";
 
-  for (const mesh of [torsos, legs, heads]) {
+  for (const mesh of [torsos, legs, heads, shadows]) {
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
     // NPC są przenoszeni wokół gracza; szeroka sfera utrzymuje poprawny raycast
@@ -123,6 +135,7 @@ export function createPedestrianSystem({
           legs.setMatrixAt(index, dummy.matrix);
           torsos.setMatrixAt(index, dummy.matrix);
           heads.setMatrixAt(index, dummy.matrix);
+          shadows.setMatrixAt(index, dummy.matrix);
         }
         continue;
       }
@@ -165,11 +178,13 @@ export function createPedestrianSystem({
         pedestrian.angle,
         1.78 + bob,
       );
+      updateInstance(shadows, index, pedestrian.position, pedestrian.angle, 0.03);
     }
 
     legs.instanceMatrix.needsUpdate = true;
     torsos.instanceMatrix.needsUpdate = true;
     heads.instanceMatrix.needsUpdate = true;
+    shadows.instanceMatrix.needsUpdate = true;
   }
 
   function hitNpc(index) {

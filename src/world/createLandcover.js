@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { createSurfaceMaterial } from "../core/createSurfaceMaterial.js";
 
 const TYPES = {
   greenery: new Set([
@@ -51,12 +52,6 @@ function createAreaGeometry(element, geoToWorld) {
   return geometry;
 }
 
-function createMaterial(color, simpleMaterials) {
-  return simpleMaterials
-    ? new THREE.MeshLambertMaterial({ color })
-    : new THREE.MeshStandardMaterial({ color, roughness: 1 });
-}
-
 export async function createLandcover({ geoToWorld, simpleMaterials }) {
   const response = await fetch("/warsaw-landcover.json");
   if (!response.ok) return new THREE.Group();
@@ -79,11 +74,31 @@ export async function createLandcover({ geoToWorld, simpleMaterials }) {
   const group = new THREE.Group();
   group.name = "Prawdziwe obszary terenu";
   const materials = {
-    greenery: createMaterial(0x587a50, simpleMaterials),
-    paved: createMaterial(0x898984, simpleMaterials),
-    sport: createMaterial(0x6d895d, simpleMaterials),
-    water: createMaterial(0x4e7f97, simpleMaterials),
-    rail: createMaterial(0x6b6966, simpleMaterials),
+    greenery: createSurfaceMaterial({
+      color: 0x587a50,
+      style: "grass",
+      simpleMaterials,
+    }),
+    paved: createSurfaceMaterial({
+      color: 0x898984,
+      style: "paving",
+      simpleMaterials,
+    }),
+    sport: createSurfaceMaterial({
+      color: 0x6d895d,
+      style: "sport",
+      simpleMaterials,
+    }),
+    water: createSurfaceMaterial({
+      color: 0x4e7f97,
+      style: "water",
+      simpleMaterials,
+    }),
+    rail: createSurfaceMaterial({
+      color: 0x6b6966,
+      style: "rail",
+      simpleMaterials,
+    }),
   };
 
   Object.entries(buckets).forEach(([type, geometries], index) => {

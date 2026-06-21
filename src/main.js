@@ -262,10 +262,10 @@ function updateGoal() {
 
 function updateCamera(delta) {
   if (state.isDriving) {
-    cameraOffset.set(0, 7.5, -12).applyAxisAngle(verticalAxis, car.rotation.y);
+    cameraOffset.set(0, 5.1, -10.2).applyAxisAngle(verticalAxis, car.rotation.y);
     targetCamera.copy(car.position).add(cameraOffset);
     camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4.5));
-    cameraLookAhead.set(0, 1.2, 7).applyAxisAngle(
+    cameraLookAhead.set(0, 1.15, 8).applyAxisAngle(
       verticalAxis,
       car.rotation.y,
     );
@@ -274,9 +274,9 @@ function updateCamera(delta) {
     return;
   }
 
-  targetCamera.set(player.position.x + 12, 13, player.position.z + 18);
+  targetCamera.set(player.position.x + 8.5, 7.2, player.position.z + 10.5);
   camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4));
-  camera.lookAt(player.position.x, player.position.y + 1, player.position.z - 3);
+  camera.lookAt(player.position.x, player.position.y + 1.15, player.position.z - 1.2);
 }
 
 function isGameplayActive() {
@@ -316,7 +316,13 @@ function animate(timestamp) {
     if (state.isDriving) {
       pedestrianSystem?.hitByVehicle(car.position, state.carSpeed);
     }
-    trafficSystem?.update(delta);
+    const trafficObstacles = player.visible
+      ? [player.position, car.position]
+      : [car.position];
+    trafficSystem?.update(delta, trafficObstacles);
+    trafficSystem?.forEachMovingCar((position, speed) => {
+      pedestrianSystem?.hitByVehicle(position, speed);
+    });
     weaponSystem?.update(delta);
     if (gameplayActive) adaptiveQuality.update(delta);
   }

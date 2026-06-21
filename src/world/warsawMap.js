@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { createSpatialIndex } from "./collisions.js";
+import { createSurfaceMaterial } from "../core/createSurfaceMaterial.js";
 import { createFacadeMaterial } from "./createFacadeMaterial.js";
 import { createLandcover } from "./createLandcover.js";
 import { createUrbanDetails } from "./createUrbanDetails.js";
@@ -30,26 +31,36 @@ const buildingPalette = [
 ];
 
 function createMaterials(simpleMaterials) {
-  const surfaceMaterial = (color, extra = {}) =>
-    simpleMaterials
-      ? new THREE.MeshLambertMaterial({ color, ...extra })
-      : new THREE.MeshStandardMaterial({ color, roughness: 0.95, ...extra });
-
   return {
-    vehicleRoad: surfaceMaterial(0x35383b, {
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
+    vehicleRoad: createSurfaceMaterial({
+      color: 0x35383b,
+      style: "asphalt",
+      simpleMaterials,
+      extra: {
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      },
     }),
-    roadEdge: surfaceMaterial(0xbeb8ac, {
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
+    roadEdge: createSurfaceMaterial({
+      color: 0xbeb8ac,
+      style: "paving",
+      simpleMaterials,
+      extra: {
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      },
     }),
-    pedestrianRoad: surfaceMaterial(0xa9a69d, {
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
+    pedestrianRoad: createSurfaceMaterial({
+      color: 0xa9a69d,
+      style: "paving",
+      simpleMaterials,
+      extra: {
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      },
     }),
     roadMarking: new THREE.MeshBasicMaterial({
       color: 0xf5f1df,

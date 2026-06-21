@@ -17,6 +17,8 @@ Obecny prototyp zawiera:
 - proceduralne fasady, okna i miejski styl low-poly,
 - lekki model Pałacu Kultury oraz instancjonowane drzewa, latarnie i znaki,
 - potrącanie pieszych oraz lekki ruch uliczny z zaparkowanymi autami,
+- ruch przechodzący między połączonymi ulicami i parkowanie przy krawężniku,
+- proceduralne nawierzchnie, cienie kontaktowe i więcej wyposażenia ulic,
 - prosty cel misji.
 
 ## Uruchomienie

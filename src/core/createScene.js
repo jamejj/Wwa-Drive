@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createSurfaceMaterial } from "./createSurfaceMaterial.js";
 
 export function createScene(app, performanceProfile) {
   const scene = new THREE.Scene();
@@ -11,12 +12,43 @@ export function createScene(app, performanceProfile) {
 
   // Wyższa wartość near poprawia precyzję bufora głębi i ogranicza migotanie powierzchni.
   const camera = new THREE.PerspectiveCamera(
-    55,
+    60,
     innerWidth / innerHeight,
     0.4,
     performanceProfile.viewDistance,
   );
   camera.position.set(12, 14, 18);
+
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(performanceProfile.viewDistance * 0.92, 16, 10),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: {
+        topColor: { value: new THREE.Color(0x648ca2) },
+        horizonColor: { value: new THREE.Color(0xc1c9c6) },
+      },
+      vertexShader: `
+        varying float vSkyHeight;
+        void main() {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vSkyHeight = normalize(worldPosition.xyz).y;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 topColor;
+        uniform vec3 horizonColor;
+        varying float vSkyHeight;
+        void main() {
+          float blend = smoothstep(-0.08, 0.72, vSkyHeight);
+          gl_FragColor = vec4(mix(horizonColor, topColor, blend), 1.0);
+        }
+      `,
+    }),
+  );
+  sky.name = "Niebo";
+  scene.add(sky);
 
   const renderer = new THREE.WebGLRenderer({
     antialias: performanceProfile.antialias,
@@ -50,9 +82,11 @@ export function createScene(app, performanceProfile) {
   sun.shadow.camera.bottom = -100;
   scene.add(sun);
 
-  const groundMaterial = performanceProfile.simpleMaterials
-    ? new THREE.MeshLambertMaterial({ color: 0x718365 })
-    : new THREE.MeshStandardMaterial({ color: 0x718365, roughness: 1 });
+  const groundMaterial = createSurfaceMaterial({
+    color: 0x718365,
+    style: "grass",
+    simpleMaterials: performanceProfile.simpleMaterials,
+  });
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(1500, 1400),
     groundMaterial,

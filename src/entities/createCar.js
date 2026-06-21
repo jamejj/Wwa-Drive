@@ -4,6 +4,20 @@ export function createCar() {
   const vehicle = new THREE.Group();
   vehicle.name = "Samochód gracza";
 
+  const contactShadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1.5, 16),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false,
+    }),
+  );
+  contactShadow.rotation.x = -Math.PI / 2;
+  contactShadow.scale.set(0.88, 1.35, 1);
+  contactShadow.position.y = 0.035;
+  vehicle.add(contactShadow);
+
   const paint = new THREE.MeshStandardMaterial({
     color: 0xc72732,
     metalness: 0.25,
