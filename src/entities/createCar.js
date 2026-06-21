@@ -63,5 +63,6 @@ export function createCar() {
   }
 
   vehicle.userData.wheels = wheels;
+  vehicle.userData.paintMaterial = paint;
   return vehicle;
 }

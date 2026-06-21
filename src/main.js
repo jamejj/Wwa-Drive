@@ -69,17 +69,20 @@ let roadIndex = null;
 let pedestrianSystem = null;
 let weaponSystem = null;
 let trafficSystem = null;
+let nearbyTrafficCar = null;
 
 function resetGame() {
   player.position.copy(spawnPoint);
   player.visible = true;
   car.position.copy(carSpawnPoint);
   car.rotation.y = Math.PI;
+  car.userData.paintMaterial.color.setHex(0xc72732);
   state.carSpeed = 0;
   state.isDriving = false;
   state.goalReached = false;
   hud.elements.message.classList.remove("visible");
   marker.visible = true;
+  trafficSystem?.reset();
   hud.setDrivingMode(false);
 }
 
@@ -100,6 +103,22 @@ function toggleVehicle() {
   if (player.position.distanceTo(car.position) <= 3.2) {
     state.isDriving = true;
     player.visible = false;
+    hud.setVehiclePrompt(false, true);
+    hud.setDrivingMode(true);
+    return;
+  }
+
+  const trafficCar = trafficSystem?.getNearestEnterable(player.position);
+  if (trafficCar) {
+    const takenCar = trafficSystem.takeCar(trafficCar.index);
+    if (!takenCar) return;
+    car.position.copy(takenCar.position);
+    car.rotation.y = takenCar.rotation;
+    car.userData.paintMaterial.color.setHex(takenCar.color);
+    state.carSpeed = 0;
+    state.isDriving = true;
+    player.visible = false;
+    nearbyTrafficCar = null;
     hud.setVehiclePrompt(false, true);
     hud.setDrivingMode(true);
   }
@@ -156,6 +175,10 @@ function updatePlayer(delta) {
       player.position.x = previousPosition.x;
       player.position.z = previousPosition.z;
     }
+    if (trafficSystem?.collides(player.position, 0.38)) {
+      player.position.x = previousPosition.x;
+      player.position.z = previousPosition.z;
+    }
   } else {
     player.position.y = THREE.MathUtils.lerp(player.position.y, 0, delta * 12);
   }
@@ -202,6 +225,11 @@ function updateCar(delta) {
     car.rotation.y = previousRotation;
     state.carSpeed *= -0.12;
   }
+  if (trafficSystem?.collides(car.position, 1.2)) {
+    car.position.copy(previousPosition);
+    car.rotation.y = previousRotation;
+    state.carSpeed *= -0.18;
+  }
   for (const wheel of car.userData.wheels) {
     wheel.rotation.x += state.carSpeed * delta * 2.5;
   }
@@ -209,11 +237,18 @@ function updateCar(delta) {
 }
 
 function updateInteractions() {
-  const canEnter =
+  const canEnterPlayerCar =
     state.gameStarted &&
     !state.isDriving &&
     player.position.distanceTo(car.position) <= 3.2;
-  hud.setVehiclePrompt(canEnter || state.isDriving, state.isDriving);
+  nearbyTrafficCar =
+    state.gameStarted && !state.isDriving
+      ? trafficSystem?.getNearestEnterable(player.position)
+      : null;
+  hud.setVehiclePrompt(
+    canEnterPlayerCar || Boolean(nearbyTrafficCar) || state.isDriving,
+    state.isDriving,
+  );
 }
 
 function updateGoal() {
@@ -323,6 +358,7 @@ try {
   trafficSystem = createTrafficSystem({
     segments: map.trafficSegments,
     profile: performanceProfile,
+    focusPosition: player.position,
   });
   scene.add(trafficSystem.group);
   weaponSystem = createWeaponSystem({

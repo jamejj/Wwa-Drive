@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { createSpatialIndex } from "./collisions.js";
 import { createFacadeMaterial } from "./createFacadeMaterial.js";
+import { createLandcover } from "./createLandcover.js";
 import { createUrbanDetails } from "./createUrbanDetails.js";
 import { createWarsawLandmarks } from "./createWarsawLandmarks.js";
 
@@ -358,9 +359,16 @@ function addRenderChunks(group, chunks, materials) {
 }
 
 export async function buildWarsawMap(performanceProfile) {
-  const data = await fetchMapData();
+  const [data, landcover] = await Promise.all([
+    fetchMapData(),
+    createLandcover({
+      geoToWorld,
+      simpleMaterials: performanceProfile.simpleMaterials,
+    }),
+  ]);
   const group = new THREE.Group();
   group.name = "Warszawa — centrum (OpenStreetMap)";
+  group.add(landcover);
   const materials = createMaterials(performanceProfile.simpleMaterials);
 
   const roads = data.elements.filter(
@@ -415,9 +423,7 @@ export async function buildWarsawMap(performanceProfile) {
     buildingIndex,
     roadIndex: createSpatialIndex(roadSurfaces),
     trafficSegments: roadSurfaces
-      .filter((segment) => segment.length > 32 && segment.halfWidth >= 3.5)
-      .sort((a, b) => b.length - a.length)
-      .slice(0, 180),
+      .filter((segment) => segment.length > 12 && segment.halfWidth >= 2.6),
     statistics: {
       roads: roads.length,
       buildings: buildings.length,

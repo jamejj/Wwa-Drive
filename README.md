@@ -62,6 +62,7 @@ parametrem adresu: `?quality=balanced` albo `?quality=high`.
 
 Po aktualizacji danych OpenStreetMap można je odchudzić poleceniem
 `npm run optimize:map`.
+Warstwy parków, parkingów i wody optymalizuje `npm run optimize:landcover`.
 
 ## Plan rozwoju
 
