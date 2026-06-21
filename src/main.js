@@ -5,6 +5,7 @@ import { createScene } from "./core/createScene.js";
 import { getPerformanceProfile } from "./core/performanceProfile.js";
 import { createCar } from "./entities/createCar.js";
 import { createMissionMarker } from "./entities/createMissionMarker.js";
+import { createPedestrianSystem } from "./entities/createPedestrianSystem.js";
 import { createPlayer } from "./entities/createPlayer.js";
 import { createHud } from "./ui/createHud.js";
 import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
@@ -63,6 +64,7 @@ let diagnosticFrames = 0;
 let diagnosticTime = 0;
 let buildingIndex = null;
 let roadIndex = null;
+let pedestrianSystem = null;
 
 function resetGame() {
   player.position.copy(spawnPoint);
@@ -263,6 +265,8 @@ function animate(timestamp) {
     else updatePlayer(delta);
     updateInteractions();
     updateGoal();
+    const focusPosition = state.isDriving ? car.position : player.position;
+    pedestrianSystem?.update(delta, timer.getElapsed(), focusPosition);
     if (gameplayActive) adaptiveQuality.update(delta);
   }
 
@@ -294,10 +298,17 @@ try {
   scene.add(map.group);
   buildingIndex = map.buildingIndex;
   roadIndex = map.roadIndex;
+  pedestrianSystem = createPedestrianSystem({
+    count: performanceProfile.pedestrianCount,
+    spawnCenter: player.position,
+    buildingIndex,
+  });
+  scene.add(pedestrianSystem.group);
   hud.setMapReady(map.statistics);
   console.info(
     `Tryb wydajności: ${performanceProfile.name}, limit ` +
-      `${performanceProfile.targetFps} FPS, pixel ratio ${adaptiveQuality.getPixelRatio()}.`,
+      `${performanceProfile.targetFps} FPS, pixel ratio ${adaptiveQuality.getPixelRatio()}, ` +
+      `${pedestrianSystem.count} pieszych.`,
   );
 } catch (error) {
   hud.setMapError(error);

@@ -9,6 +9,7 @@ const PROFILES = {
     shadows: false,
     shadowMapSize: 512,
     viewDistance: 360,
+    pedestrianCount: 8,
   },
   balanced: {
     name: "balanced",
@@ -20,6 +21,7 @@ const PROFILES = {
     shadows: false,
     shadowMapSize: 1024,
     viewDistance: 560,
+    pedestrianCount: 16,
   },
   high: {
     name: "high",
@@ -31,6 +33,7 @@ const PROFILES = {
     shadows: true,
     shadowMapSize: 2048,
     viewDistance: 850,
+    pedestrianCount: 28,
   },
 };
 

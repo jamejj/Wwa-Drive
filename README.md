@@ -12,6 +12,7 @@ Obecny prototyp zawiera:
 - samochód z możliwością wsiadania, wysiadania i jazdy,
 - kolizje z budynkami i wolniejszą jazdę poza drogami,
 - lekki tryb 30 FPS zoptymalizowany pod słabsze komputery,
+- lekkich pieszych NPC działających jako instancje,
 - prosty cel misji.
 
 ## Uruchomienie
