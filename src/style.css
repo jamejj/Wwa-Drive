@@ -1,7 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800;900&family=Inter:wght@400;600&display=swap");
-
 :root {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #fff;
   background: #11131a;
   font-synthesis: none;
@@ -38,7 +36,7 @@ canvas {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-family: "Barlow Condensed", sans-serif;
+  font-family: Impact, "Arial Narrow", sans-serif;
   font-size: 21px;
   letter-spacing: 0.06em;
   transform: skew(-5deg);
@@ -63,7 +61,7 @@ canvas {
 
 .mission small {
   color: #ffd91a;
-  font: 800 12px/1 "Barlow Condensed", sans-serif;
+  font: 800 12px/1 Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.16em;
 }
 
@@ -103,13 +101,13 @@ canvas {
 }
 
 .speedometer strong {
-  font: 900 38px/0.9 "Barlow Condensed", sans-serif;
+  font: 900 38px/0.9 Impact, "Arial Narrow", sans-serif;
 }
 
 .speedometer span {
   margin-top: 5px;
   color: #ffd91a;
-  font: 800 10px "Barlow Condensed", sans-serif;
+  font: 800 10px Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.14em;
 }
 
@@ -157,7 +155,7 @@ canvas {
 .performance-panel strong {
   margin-bottom: 3px;
   color: #ffd91a;
-  font: 800 11px "Barlow Condensed", sans-serif;
+  font: 800 11px Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.12em;
 }
 
@@ -175,7 +173,7 @@ kbd {
   border-radius: 3px;
   color: white;
   background: rgb(0 0 0 / 30%);
-  font: 600 10px Inter, sans-serif;
+  font: 600 10px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .start-screen {
@@ -208,13 +206,13 @@ kbd {
 .eyebrow {
   margin: 0 0 12px;
   color: #ffd91a;
-  font: 800 12px/1 "Barlow Condensed", sans-serif;
+  font: 800 12px/1 Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.26em;
 }
 
 .start-card h1 {
   margin: 0;
-  font: italic 900 82px/0.7 "Barlow Condensed", sans-serif;
+  font: italic 900 82px/0.7 Impact, "Arial Narrow", sans-serif;
   letter-spacing: -0.05em;
   transform: skew(-4deg);
 }
@@ -236,7 +234,7 @@ kbd {
   color: #171717;
   background: #ffd91a;
   cursor: pointer;
-  font: 900 16px "Barlow Condensed", sans-serif;
+  font: 900 16px Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.1em;
   transition: transform 150ms ease, background 150ms ease;
 }
@@ -285,7 +283,7 @@ kbd {
 
 .message strong {
   color: #ffd91a;
-  font: 900 18px "Barlow Condensed", sans-serif;
+  font: 900 18px Impact, "Arial Narrow", sans-serif;
   letter-spacing: 0.1em;
 }
 
