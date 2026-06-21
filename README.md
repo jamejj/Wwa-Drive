@@ -16,6 +16,7 @@ Obecny prototyp zawiera:
 - prosty system strzelania do NPC z raycastingiem i cooldownem,
 - proceduralne fasady, okna i miejski styl low-poly,
 - lekki model Pałacu Kultury oraz instancjonowane drzewa, latarnie i znaki,
+- potrącanie pieszych oraz lekki ruch uliczny z zaparkowanymi autami,
 - prosty cel misji.
 
 ## Uruchomienie

@@ -186,6 +186,23 @@ export function createPedestrianSystem({
     return true;
   }
 
+  function hitByVehicle(vehiclePosition, speed) {
+    if (Math.abs(speed) < 3.2) return 0;
+    let hitCount = 0;
+    for (let index = 0; index < pedestrians.length; index += 1) {
+      const pedestrian = pedestrians[index];
+      if (
+        pedestrian.active &&
+        pedestrian.hitTimer <= 0 &&
+        pedestrian.position.distanceToSquared(vehiclePosition) < 1.75 * 1.75 &&
+        hitNpc(index)
+      ) {
+        hitCount += 1;
+      }
+    }
+    return hitCount;
+  }
+
   update(0, 0, spawnCenter);
   return {
     group,
@@ -193,5 +210,6 @@ export function createPedestrianSystem({
     count,
     raycastTargets: [torsos, heads, legs],
     hitNpc,
+    hitByVehicle,
   };
 }

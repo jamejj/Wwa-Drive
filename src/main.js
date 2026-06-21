@@ -7,6 +7,7 @@ import { createCar } from "./entities/createCar.js";
 import { createMissionMarker } from "./entities/createMissionMarker.js";
 import { createPedestrianSystem } from "./entities/createPedestrianSystem.js";
 import { createPlayer } from "./entities/createPlayer.js";
+import { createTrafficSystem } from "./entities/createTrafficSystem.js";
 import { createWeaponSystem } from "./entities/createWeaponSystem.js";
 import { createHud } from "./ui/createHud.js";
 import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
@@ -67,6 +68,7 @@ let buildingIndex = null;
 let roadIndex = null;
 let pedestrianSystem = null;
 let weaponSystem = null;
+let trafficSystem = null;
 
 function resetGame() {
   player.position.copy(spawnPoint);
@@ -276,6 +278,10 @@ function animate(timestamp) {
     updateGoal();
     const focusPosition = state.isDriving ? car.position : player.position;
     pedestrianSystem?.update(delta, timer.getElapsed(), focusPosition);
+    if (state.isDriving) {
+      pedestrianSystem?.hitByVehicle(car.position, state.carSpeed);
+    }
+    trafficSystem?.update(delta);
     weaponSystem?.update(delta);
     if (gameplayActive) adaptiveQuality.update(delta);
   }
@@ -314,6 +320,11 @@ try {
     buildingIndex,
   });
   scene.add(pedestrianSystem.group);
+  trafficSystem = createTrafficSystem({
+    segments: map.trafficSegments,
+    profile: performanceProfile,
+  });
+  scene.add(trafficSystem.group);
   weaponSystem = createWeaponSystem({
     camera,
     scene,
@@ -325,7 +336,8 @@ try {
   console.info(
     `Tryb wydajności: ${performanceProfile.name}, limit ` +
       `${performanceProfile.targetFps} FPS, pixel ratio ${adaptiveQuality.getPixelRatio()}, ` +
-      `${pedestrianSystem.count} pieszych.`,
+      `${pedestrianSystem.count} pieszych, ${trafficSystem.movingCount} aut w ruchu i ` +
+      `${trafficSystem.parkedCount} zaparkowanych.`,
   );
 } catch (error) {
   hud.setMapError(error);

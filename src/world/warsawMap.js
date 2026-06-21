@@ -240,6 +240,7 @@ function addRoad(chunks, detailAnchors, way) {
         maxX: Math.max(start.x, end.x) + halfWidth,
         minZ: Math.min(start.z, end.z) - halfWidth,
         maxZ: Math.max(start.z, end.z) + halfWidth,
+        length,
       });
 
       if (length > 8 && (Math.abs(way.id + index * 17) % 5 === 0)) {
@@ -413,6 +414,10 @@ export async function buildWarsawMap(performanceProfile) {
     group,
     buildingIndex,
     roadIndex: createSpatialIndex(roadSurfaces),
+    trafficSegments: roadSurfaces
+      .filter((segment) => segment.length > 32 && segment.halfWidth >= 3.5)
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 180),
     statistics: {
       roads: roads.length,
       buildings: buildings.length,
