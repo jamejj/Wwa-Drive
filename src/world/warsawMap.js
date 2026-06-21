@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { createSpatialIndex } from "./collisions.js";
 
 const CENTER = { lat: 52.2331, lon: 21.0065 };
 const BOUNDS = {
@@ -314,8 +315,8 @@ export async function buildWarsawMap() {
 
   return {
     group,
-    buildingColliders,
-    roadSurfaces,
+    buildingIndex: createSpatialIndex(buildingColliders),
+    roadIndex: createSpatialIndex(roadSurfaces),
     statistics: {
       roads: roads.length,
       buildings: buildings.length,

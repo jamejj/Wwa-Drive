@@ -51,8 +51,8 @@ const cameraLookAhead = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
 const frameInterval = 1000 / performanceProfile.targetFps;
 let lastFrameTime = 0;
-let buildingColliders = [];
-let roadSurfaces = [];
+let buildingIndex = null;
+let roadIndex = null;
 
 function resetGame() {
   player.position.copy(spawnPoint);
@@ -119,7 +119,7 @@ function updatePlayer(delta) {
     player.rotation.y = Math.atan2(playerDirection.x, playerDirection.z);
     state.walkTime += delta * speed;
     player.position.y = Math.abs(Math.sin(state.walkTime * 2.5)) * 0.07;
-    if (collidesWithBuildings(player.position, 0.38, buildingColliders)) {
+    if (collidesWithBuildings(player.position, 0.38, buildingIndex)) {
       player.position.x = previousPosition.x;
       player.position.z = previousPosition.z;
     }
@@ -131,7 +131,7 @@ function updatePlayer(delta) {
 function updateCar(delta) {
   const throttle = Number(keys.KeyW) - Number(keys.KeyS);
   const steering = Number(keys.KeyA) - Number(keys.KeyD);
-  const onRoad = isPointOnRoad(car.position, roadSurfaces);
+  const onRoad = isPointOnRoad(car.position, roadIndex);
   const maxForwardSpeed = onRoad ? 25 : 10;
   const maxReverseSpeed = -9;
   const acceleration = onRoad ? 15 : 7;
@@ -164,7 +164,7 @@ function updateCar(delta) {
   const previousRotation = car.rotation.y;
   car.position.x += Math.sin(car.rotation.y) * state.carSpeed * delta;
   car.position.z += Math.cos(car.rotation.y) * state.carSpeed * delta;
-  if (collidesWithBuildings(car.position, 1.2, buildingColliders)) {
+  if (collidesWithBuildings(car.position, 1.2, buildingIndex)) {
     car.position.copy(previousPosition);
     car.rotation.y = previousRotation;
     state.carSpeed *= -0.12;
@@ -239,8 +239,8 @@ requestAnimationFrame(animate);
 try {
   const map = await buildWarsawMap();
   scene.add(map.group);
-  buildingColliders = map.buildingColliders;
-  roadSurfaces = map.roadSurfaces;
+  buildingIndex = map.buildingIndex;
+  roadIndex = map.roadIndex;
   hud.setMapReady(map.statistics);
   console.info(
     `Tryb wydajności: ${performanceProfile.name}, limit ${performanceProfile.targetFps} FPS.`,

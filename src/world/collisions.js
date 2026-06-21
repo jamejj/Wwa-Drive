@@ -28,12 +28,56 @@ function squaredDistanceToSegment(x, z, start, end) {
   return (x - closestX) ** 2 + (z - closestZ) ** 2;
 }
 
-export function collidesWithBuildings(position, radius, colliders) {
+export function createSpatialIndex(items, cellSize = 32) {
+  const cells = new Map();
+
+  for (const item of items) {
+    const minCellX = Math.floor(item.minX / cellSize);
+    const maxCellX = Math.floor(item.maxX / cellSize);
+    const minCellZ = Math.floor(item.minZ / cellSize);
+    const maxCellZ = Math.floor(item.maxZ / cellSize);
+
+    for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+      for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
+        const key = `${cellX}:${cellZ}`;
+        if (!cells.has(key)) cells.set(key, []);
+        cells.get(key).push(item);
+      }
+    }
+  }
+
+  return {
+    query(minX, minZ, maxX, maxZ) {
+      const found = new Set();
+      const minCellX = Math.floor(minX / cellSize);
+      const maxCellX = Math.floor(maxX / cellSize);
+      const minCellZ = Math.floor(minZ / cellSize);
+      const maxCellZ = Math.floor(maxZ / cellSize);
+
+      for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+        for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
+          const cell = cells.get(`${cellX}:${cellZ}`);
+          if (!cell) continue;
+          for (const item of cell) found.add(item);
+        }
+      }
+      return found;
+    },
+  };
+}
+
+export function collidesWithBuildings(position, radius, spatialIndex) {
   const x = position.x;
   const z = position.z;
   const radiusSquared = radius * radius;
+  const nearbyColliders = spatialIndex.query(
+    x - radius,
+    z - radius,
+    x + radius,
+    z + radius,
+  );
 
-  for (const collider of colliders) {
+  for (const collider of nearbyColliders) {
     if (
       x + radius < collider.minX ||
       x - radius > collider.maxX ||
@@ -56,7 +100,14 @@ export function collidesWithBuildings(position, radius, colliders) {
 }
 
 export function isPointOnRoad(position, roadSurfaces) {
-  for (const road of roadSurfaces) {
+  const nearbyRoads = roadSurfaces.query(
+    position.x,
+    position.z,
+    position.x,
+    position.z,
+  );
+
+  for (const road of nearbyRoads) {
     if (
       position.x < road.minX ||
       position.x > road.maxX ||
