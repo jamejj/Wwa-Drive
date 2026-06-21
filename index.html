@@ -19,16 +19,25 @@
         <p>Przejdź do żółtego znacznika</p>
       </div>
       <div class="controls">
-        <span><kbd>WASD</kbd> ruch</span>
-        <span><kbd>SHIFT</kbd> bieg</span>
+        <span id="primary-control"><kbd>WASD</kbd> ruch</span>
+        <span id="secondary-control"><kbd>SHIFT</kbd> bieg</span>
+        <span><kbd>E</kbd> wsiądź / wysiądź</span>
         <span><kbd>R</kbd> restart</span>
+      </div>
+      <div class="speedometer" id="speedometer">
+        <strong id="speed-value">0</strong>
+        <span>KM/H</span>
+      </div>
+      <div class="action-prompt" id="action-prompt">
+        <kbd>E</kbd>
+        <span>Wsiądź do samochodu</span>
       </div>
       <div class="attribution">Dane mapy © OpenStreetMap contributors</div>
     </div>
 
     <div class="start-screen" id="start-screen">
       <div class="start-card">
-        <p class="eyebrow">PROTOTYP 01</p>
+        <p class="eyebrow">PROTOTYP 02</p>
         <h1>WAWA<br /><span>DRIVE</span></h1>
         <p>Mały kawałek miasta. Wielkie plany.</p>
         <button id="start-button" disabled>WCZYTYWANIE WARSZAWY…</button>
@@ -38,7 +47,7 @@
 
     <div class="message" id="message">
       <strong>CEL OSIĄGNIĘTY</strong>
-      <span>Pierwszy spacer po mieście zaliczony.</span>
+      <span>Pierwszy przejazd przez centrum zaliczony.</span>
     </div>
 
     <script type="module" src="/src/main.js"></script>

@@ -8,6 +8,7 @@ Obecny prototyp zawiera:
 - fragment centrum Warszawy zbudowany na danych OpenStreetMap,
 - prawdziwy układ ulic i obrysy budynków,
 - sterowaną postać i kamerę 3D,
+- samochód z możliwością wsiadania, wysiadania i jazdy,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -26,6 +27,9 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 
 - `WASD` — poruszanie postacią
 - `Shift` — bieg
+- `E` — wsiadanie i wysiadanie z samochodu
+- `W/S` — gaz i hamulec podczas jazdy
+- `A/D` — skręcanie podczas jazdy
 - `R` — powrót na pozycję startową
 
 ## Technologie

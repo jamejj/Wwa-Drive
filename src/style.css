@@ -82,6 +82,59 @@ canvas {
   font-size: 11px;
 }
 
+.speedometer {
+  position: absolute;
+  right: 30px;
+  bottom: 45px;
+  display: none;
+  width: 105px;
+  height: 105px;
+  border: 2px solid rgb(255 255 255 / 18%);
+  border-bottom-color: #ffd91a;
+  border-radius: 50%;
+  background: rgb(10 11 15 / 72%);
+  place-content: center;
+  text-align: center;
+  box-shadow: 0 12px 35px rgb(0 0 0 / 25%);
+}
+
+.speedometer.visible {
+  display: grid;
+}
+
+.speedometer strong {
+  font: 900 38px/0.9 "Barlow Condensed", sans-serif;
+}
+
+.speedometer span {
+  margin-top: 5px;
+  color: #ffd91a;
+  font: 800 10px "Barlow Condensed", sans-serif;
+  letter-spacing: 0.14em;
+}
+
+.action-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 105px;
+  display: flex;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 4px;
+  background: rgb(10 11 15 / 82%);
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition: 180ms ease;
+}
+
+.action-prompt.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .attribution {
   position: absolute;
   right: 20px;
@@ -233,6 +286,17 @@ kbd {
     left: 20px;
     justify-content: space-between;
     gap: 6px;
+  }
+
+  .speedometer {
+    right: 18px;
+    bottom: 58px;
+    width: 82px;
+    height: 82px;
+  }
+
+  .speedometer strong {
+    font-size: 30px;
   }
 
   .attribution {

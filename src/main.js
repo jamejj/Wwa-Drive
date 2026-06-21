@@ -6,6 +6,13 @@ const app = document.querySelector("#app");
 const startScreen = document.querySelector("#start-screen");
 const startButton = document.querySelector("#start-button");
 const message = document.querySelector("#message");
+const actionPrompt = document.querySelector("#action-prompt");
+const actionPromptText = actionPrompt.querySelector("span");
+const speedometer = document.querySelector("#speedometer");
+const speedValue = document.querySelector("#speed-value");
+const primaryControl = document.querySelector("#primary-control");
+const secondaryControl = document.querySelector("#secondary-control");
+const missionText = document.querySelector(".mission p");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa8bfcb);
@@ -72,6 +79,77 @@ const spawnPoint = geoToWorld(52.23225, 21.00335);
 player.position.copy(spawnPoint);
 scene.add(player);
 
+function createCar() {
+  const vehicle = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({
+    color: 0xc72732,
+    metalness: 0.25,
+    roughness: 0.38,
+  });
+  const glass = new THREE.MeshStandardMaterial({
+    color: 0x263944,
+    metalness: 0.15,
+    roughness: 0.18,
+  });
+
+  const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.62, 4.15), paint);
+  lowerBody.position.y = 0.72;
+  lowerBody.castShadow = true;
+  lowerBody.receiveShadow = true;
+  vehicle.add(lowerBody);
+
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.28, 1.2), paint);
+  hood.position.set(0, 1.08, 1.28);
+  hood.castShadow = true;
+  vehicle.add(hood);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.82, 1.85), glass);
+  cabin.position.set(0, 1.28, -0.22);
+  cabin.castShadow = true;
+  vehicle.add(cabin);
+
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.16, 1.15), paint);
+  roof.position.set(0, 1.74, -0.25);
+  roof.castShadow = true;
+  vehicle.add(roof);
+
+  const wheels = [];
+  for (const x of [-1.05, 1.05]) {
+    for (const z of [-1.3, 1.3]) {
+      const wheel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.39, 0.39, 0.3, 18),
+        new THREE.MeshStandardMaterial({ color: 0x121315, roughness: 1 }),
+      );
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, 0.45, z);
+      wheel.castShadow = true;
+      wheels.push(wheel);
+      vehicle.add(wheel);
+    }
+  }
+
+  for (const x of [-0.67, 0.67]) {
+    const light = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.22, 0.08),
+      new THREE.MeshStandardMaterial({
+        color: 0xfff1bd,
+        emissive: 0x4c3f19,
+      }),
+    );
+    light.position.set(x, 0.85, 2.095);
+    vehicle.add(light);
+  }
+
+  vehicle.userData.wheels = wheels;
+  return vehicle;
+}
+
+const car = createCar();
+const carSpawnPoint = spawnPoint.clone().add(new THREE.Vector3(2.5, 0, 0.8));
+car.position.copy(carSpawnPoint);
+car.rotation.y = Math.PI;
+scene.add(car);
+
 const marker = new THREE.Group();
 const markerRing = new THREE.Mesh(
   new THREE.TorusGeometry(1.15, 0.09, 10, 40),
@@ -99,6 +177,8 @@ scene.add(marker);
 const keys = {};
 let gameStarted = false;
 let goalReached = false;
+let isDriving = false;
+let carSpeed = 0;
 let walkTime = 0;
 const timer = new THREE.Timer();
 timer.connect(document);
@@ -107,11 +187,20 @@ const targetCamera = new THREE.Vector3();
 
 addEventListener("keydown", (event) => {
   keys[event.code] = true;
+  if (event.code === "KeyE" && !event.repeat && gameStarted) {
+    toggleVehicle();
+  }
   if (event.code === "KeyR") {
     player.position.copy(spawnPoint);
+    player.visible = true;
+    car.position.copy(carSpawnPoint);
+    car.rotation.y = Math.PI;
+    carSpeed = 0;
+    isDriving = false;
     goalReached = false;
     message.classList.remove("visible");
     marker.visible = true;
+    updateHudMode();
   }
 });
 addEventListener("keyup", (event) => {
@@ -121,7 +210,43 @@ addEventListener("keyup", (event) => {
 startButton.addEventListener("click", () => {
   gameStarted = true;
   startScreen.classList.add("hidden");
+  updateHudMode();
 });
+
+function updateHudMode() {
+  speedometer.classList.toggle("visible", isDriving);
+  primaryControl.innerHTML = isDriving
+    ? "<kbd>W/S</kbd> gaz / hamulec"
+    : "<kbd>WASD</kbd> ruch";
+  secondaryControl.innerHTML = isDriving
+    ? "<kbd>A/D</kbd> skręcanie"
+    : "<kbd>SHIFT</kbd> bieg";
+  missionText.textContent = isDriving
+    ? "Jedź do żółtego znacznika"
+    : "Znajdź auto i jedź do znacznika";
+}
+
+function toggleVehicle() {
+  if (isDriving) {
+    isDriving = false;
+    player.visible = true;
+    const exitOffset = new THREE.Vector3(2.2, 0, 0).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      car.rotation.y,
+    );
+    player.position.copy(car.position).add(exitOffset);
+    player.rotation.y = car.rotation.y;
+    updateHudMode();
+    return;
+  }
+
+  if (player.position.distanceTo(car.position) <= 3.2) {
+    isDriving = true;
+    player.visible = false;
+    actionPrompt.classList.remove("visible");
+    updateHudMode();
+  }
+}
 
 function updatePlayer(delta) {
   playerDirection.set(
@@ -141,7 +266,49 @@ function updatePlayer(delta) {
     player.position.y = THREE.MathUtils.lerp(player.position.y, 0, delta * 12);
   }
 
-  if (!goalReached && player.position.distanceTo(marker.position) < 2.3) {
+}
+
+function updateCar(delta) {
+  const throttle = Number(keys.KeyW) - Number(keys.KeyS);
+  const steering = Number(keys.KeyA) - Number(keys.KeyD);
+  const maxForwardSpeed = 25;
+  const maxReverseSpeed = -9;
+
+  if (throttle > 0) carSpeed += 15 * delta;
+  if (throttle < 0) carSpeed -= (carSpeed > 1 ? 25 : 10) * delta;
+  if (throttle === 0) carSpeed *= Math.exp(-1.8 * delta);
+
+  carSpeed = THREE.MathUtils.clamp(carSpeed, maxReverseSpeed, maxForwardSpeed);
+  if (Math.abs(carSpeed) < 0.04) carSpeed = 0;
+
+  const speedRatio = THREE.MathUtils.clamp(Math.abs(carSpeed) / maxForwardSpeed, 0, 1);
+  if (Math.abs(carSpeed) > 0.15) {
+    const direction = Math.sign(carSpeed);
+    car.rotation.y += steering * direction * (1.4 - speedRatio * 0.55) * delta;
+  }
+
+  car.position.x += Math.sin(car.rotation.y) * carSpeed * delta;
+  car.position.z += Math.cos(car.rotation.y) * carSpeed * delta;
+
+  for (const wheel of car.userData.wheels) {
+    wheel.rotation.x += carSpeed * delta * 2.5;
+  }
+
+  speedValue.textContent = Math.round(Math.abs(carSpeed) * 3.6);
+}
+
+function updateInteractions() {
+  const distanceToCar = player.position.distanceTo(car.position);
+  const canEnter = gameStarted && !isDriving && distanceToCar <= 3.2;
+  actionPrompt.classList.toggle("visible", canEnter || isDriving);
+  actionPromptText.textContent = isDriving
+    ? "Wysiądź z samochodu"
+    : "Wsiądź do samochodu";
+}
+
+function updateGoal() {
+  const controlledPosition = isDriving ? car.position : player.position;
+  if (!goalReached && controlledPosition.distanceTo(marker.position) < 3.2) {
     goalReached = true;
     marker.visible = false;
     message.classList.add("visible");
@@ -149,6 +316,21 @@ function updatePlayer(delta) {
 }
 
 function updateCamera(delta) {
+  if (isDriving) {
+    const cameraOffset = new THREE.Vector3(0, 7.5, -12).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      car.rotation.y,
+    );
+    targetCamera.copy(car.position).add(cameraOffset);
+    camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4.5));
+    const lookAhead = new THREE.Vector3(0, 1.2, 7).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      car.rotation.y,
+    );
+    camera.lookAt(car.position.clone().add(lookAhead));
+    return;
+  }
+
   targetCamera.set(player.position.x + 12, 13, player.position.z + 18);
   camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4));
   camera.lookAt(player.position.x, player.position.y + 1, player.position.z - 3);
@@ -157,7 +339,12 @@ function updateCamera(delta) {
 function animate(timestamp) {
   timer.update(timestamp);
   const delta = Math.min(timer.getDelta(), 0.05);
-  if (gameStarted) updatePlayer(delta);
+  if (gameStarted) {
+    if (isDriving) updateCar(delta);
+    else updatePlayer(delta);
+    updateInteractions();
+    updateGoal();
+  }
   updateCamera(delta);
   marker.rotation.y += delta * 0.7;
   markerRing.scale.setScalar(1 + Math.sin(timer.getElapsed() * 3) * 0.08);
