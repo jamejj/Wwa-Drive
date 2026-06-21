@@ -12,6 +12,21 @@ const CACHE_KEY = "wawa-drive-osm-center-v1";
 const metersPerLongitude = 111_320 * Math.cos((CENTER.lat * Math.PI) / 180);
 const metersPerLatitude = 110_540;
 
+const vehicleRoadMaterial = new THREE.MeshStandardMaterial({
+  color: 0x303238,
+  roughness: 0.97,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+  polygonOffsetUnits: -2,
+});
+const pedestrianRoadMaterial = new THREE.MeshStandardMaterial({
+  color: 0xaaa59b,
+  roughness: 1,
+  polygonOffset: true,
+  polygonOffsetFactor: -1,
+  polygonOffsetUnits: -1,
+});
+
 export function geoToWorld(lat, lon) {
   return new THREE.Vector3(
     (lon - CENTER.lon) * metersPerLongitude,
@@ -42,21 +57,20 @@ function roadWidth(tags) {
   return widths[tags.highway] ?? 4.5;
 }
 
-function buildingHeight(tags) {
-  const taggedHeight = Number.parseFloat(tags.height);
+function buildingHeight(way) {
+  const taggedHeight = Number.parseFloat(way.tags.height);
   if (Number.isFinite(taggedHeight)) return THREE.MathUtils.clamp(taggedHeight, 3, 90);
 
-  const levels = Number.parseFloat(tags["building:levels"]);
+  const levels = Number.parseFloat(way.tags["building:levels"]);
   if (Number.isFinite(levels)) return THREE.MathUtils.clamp(levels * 3.1, 3, 90);
 
-  return 8 + Math.random() * 8;
+  // Stała wartość zależna od ID zapobiega zmianom wysokości przy każdym odświeżeniu.
+  return 8 + (Math.abs(way.id) % 80) / 10;
 }
 
 async function fetchMapData() {
   const localResponse = await fetch("/warsaw-center.json");
-  if (localResponse.ok) {
-    return localResponse.json();
-  }
+  if (localResponse.ok) return localResponse.json();
 
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
@@ -76,33 +90,34 @@ async function fetchMapData() {
     );
     out tags geom;
   `;
-
   const response = await fetch("https://overpass.kumi.systems/api/interpreter", {
     method: "POST",
     body: new URLSearchParams({ data: query }),
   });
-
   if (!response.ok) throw new Error(`OpenStreetMap: ${response.status}`);
-  const data = await response.json();
 
+  const data = await response.json();
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
   } catch {
-    // Mapa nadal działa, nawet jeśli przeglądarka nie pozwoli zachować cache.
+    // Brak cache nie blokuje gry.
   }
   return data;
 }
 
 function addRoad(group, way) {
+  if (way.tags.area === "yes" || way.tags.highway === "construction") return [];
+
   const points = way.geometry?.map((point) => geoToWorld(point.lat, point.lon));
-  if (!points || points.length < 2) return;
+  if (!points || points.length < 2) return [];
 
   const width = roadWidth(way.tags);
-  const isFootway = ["footway", "path", "pedestrian"].includes(way.tags.highway);
-  const material = new THREE.MeshStandardMaterial({
-    color: isFootway ? 0xa9a398 : 0x303238,
-    roughness: 0.96,
-  });
+  const isPedestrian = ["footway", "path", "pedestrian", "steps"].includes(
+    way.tags.highway,
+  );
+  const material = isPedestrian ? pedestrianRoadMaterial : vehicleRoadMaterial;
+  const roadY = isPedestrian ? 0.018 : 0.032;
+  const roadSurfaces = [];
 
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
@@ -112,19 +127,48 @@ function addRoad(group, way) {
     const length = Math.hypot(dx, dz);
     if (length < 0.2) continue;
 
-    const segment = new THREE.Mesh(
-      new THREE.BoxGeometry(width, 0.08, length + 0.35),
-      material,
-    );
-    segment.position.set((start.x + end.x) / 2, 0.08, (start.z + end.z) / 2);
+    // Płaskie pasy zamiast nakładających się pudełek usuwają efekt "przebłysków".
+    const geometry = new THREE.PlaneGeometry(width, length + 0.45);
+    geometry.rotateX(-Math.PI / 2);
+    const segment = new THREE.Mesh(geometry, material);
     segment.rotation.y = Math.atan2(dx, dz);
+    segment.position.set((start.x + end.x) / 2, roadY, (start.z + end.z) / 2);
     segment.receiveShadow = true;
+    segment.renderOrder = isPedestrian ? 1 : 2;
     group.add(segment);
+
+    if (!isPedestrian) {
+      const halfWidth = width / 2 + 0.6;
+      roadSurfaces.push({
+        start: { x: start.x, z: start.z },
+        end: { x: end.x, z: end.z },
+        halfWidth,
+        minX: Math.min(start.x, end.x) - halfWidth,
+        maxX: Math.max(start.x, end.x) + halfWidth,
+        minZ: Math.min(start.z, end.z) - halfWidth,
+        maxZ: Math.max(start.z, end.z) + halfWidth,
+      });
+    }
   }
+  return roadSurfaces;
+}
+
+function createBuildingCollider(way) {
+  const points = way.geometry.map((point) => {
+    const worldPoint = geoToWorld(point.lat, point.lon);
+    return { x: worldPoint.x, z: worldPoint.z };
+  });
+  return {
+    points,
+    minX: Math.min(...points.map((point) => point.x)),
+    maxX: Math.max(...points.map((point) => point.x)),
+    minZ: Math.min(...points.map((point) => point.z)),
+    maxZ: Math.max(...points.map((point) => point.z)),
+  };
 }
 
 function addBuilding(group, way) {
-  if (!way.geometry || way.geometry.length < 4) return;
+  if (!way.geometry || way.geometry.length < 4) return null;
 
   const shape = new THREE.Shape();
   way.geometry.forEach((point, index) => {
@@ -133,7 +177,7 @@ function addBuilding(group, way) {
     else shape.lineTo(worldPoint.x, -worldPoint.z);
   });
 
-  const height = buildingHeight(way.tags);
+  const height = buildingHeight(way);
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: height,
     bevelEnabled: false,
@@ -142,15 +186,19 @@ function addBuilding(group, way) {
   geometry.computeVertexNormals();
 
   const palette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
-  const color = palette[Math.abs(way.id) % palette.length];
   const building = new THREE.Mesh(
     geometry,
-    new THREE.MeshStandardMaterial({ color, roughness: 0.9 }),
+    new THREE.MeshStandardMaterial({
+      color: palette[Math.abs(way.id) % palette.length],
+      roughness: 0.9,
+    }),
   );
-  building.position.y = 0.08;
+  building.position.y = 0.06;
   building.castShadow = true;
   building.receiveShadow = true;
+  building.renderOrder = 5;
   group.add(building);
+  return createBuildingCollider(way);
 }
 
 export async function buildWarsawMap() {
@@ -158,16 +206,22 @@ export async function buildWarsawMap() {
   const group = new THREE.Group();
   group.name = "Warszawa — centrum (OpenStreetMap)";
 
-  const roads = data.elements.filter((element) => element.type === "way" && element.tags?.highway);
+  const roads = data.elements.filter(
+    (element) => element.type === "way" && element.tags?.highway,
+  );
   const buildings = data.elements.filter(
     (element) => element.type === "way" && element.tags?.building,
   );
 
-  roads.forEach((way) => addRoad(group, way));
-  buildings.forEach((way) => addBuilding(group, way));
+  const roadSurfaces = roads.flatMap((way) => addRoad(group, way));
+  const buildingColliders = buildings
+    .map((way) => addBuilding(group, way))
+    .filter(Boolean);
 
   return {
     group,
+    buildingColliders,
+    roadSurfaces,
     statistics: { roads: roads.length, buildings: buildings.length },
   };
 }

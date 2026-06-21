@@ -10,6 +10,7 @@ Obecny prototyp zawiera:
 - prawdziwy układ ulic i obrysy budynków,
 - sterowaną postać i kamerę 3D,
 - samochód z możliwością wsiadania, wysiadania i jazdy,
+- kolizje z budynkami i wolniejszą jazdę poza drogami,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -39,6 +40,14 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - Three.js
 - Vite
 - OpenStreetMap / Overpass API
+
+## Struktura kodu
+
+- `src/core` — scena, renderer i wspólne ustawienia silnika,
+- `src/entities` — gracz, samochód i obiekty misji,
+- `src/world` — mapa Warszawy, drogi i kolizje,
+- `src/ui` — interfejs gry,
+- `src/main.js` — połączenie systemów i główna pętla gry.
 
 ## Plan rozwoju
 
