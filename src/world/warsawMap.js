@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { createSpatialIndex } from "./collisions.js";
+import { createFacadeMaterial } from "./createFacadeMaterial.js";
+import { createUrbanDetails } from "./createUrbanDetails.js";
+import { createWarsawLandmarks } from "./createWarsawLandmarks.js";
 
 const CENTER = { lat: 52.2331, lon: 21.0065 };
 const BOUNDS = {
@@ -15,7 +18,15 @@ const metersPerLongitude = 111_320 * Math.cos((CENTER.lat * Math.PI) / 180);
 const metersPerLatitude = 110_540;
 const RENDER_CHUNK_SIZE = 120;
 
-const buildingPalette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
+const buildingPalette = [
+  0xb9b2a6,
+  0xd0c4ac,
+  0x9ca2a2,
+  0x747b80,
+  0xa76f58,
+  0xc3b7a1,
+  0x8f8b84,
+];
 
 function createMaterials(simpleMaterials) {
   const surfaceMaterial = (color, extra = {}) =>
@@ -24,23 +35,23 @@ function createMaterials(simpleMaterials) {
       : new THREE.MeshStandardMaterial({ color, roughness: 0.95, ...extra });
 
   return {
-    vehicleRoad: surfaceMaterial(0x303238, {
+    vehicleRoad: surfaceMaterial(0x35383b, {
       polygonOffset: true,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
     }),
-    roadEdge: surfaceMaterial(0xb7b1a7, {
+    roadEdge: surfaceMaterial(0xbeb8ac, {
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
     }),
-    pedestrianRoad: surfaceMaterial(0xaaa59b, {
+    pedestrianRoad: surfaceMaterial(0xa9a69d, {
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
     }),
     roadMarking: new THREE.MeshBasicMaterial({
-      color: 0xf1eee3,
+      color: 0xf5f1df,
       transparent: true,
       opacity: 0.82,
       depthWrite: false,
@@ -48,7 +59,9 @@ function createMaterials(simpleMaterials) {
       polygonOffsetFactor: -4,
       polygonOffsetUnits: -4,
     }),
-    buildings: buildingPalette.map((color) => surfaceMaterial(color)),
+    buildings: buildingPalette.map((color) =>
+      createFacadeMaterial(color, simpleMaterials),
+    ),
   };
 }
 
@@ -84,10 +97,18 @@ function roadWidth(tags) {
 
 function buildingHeight(way) {
   const taggedHeight = Number.parseFloat(way.tags.height);
-  if (Number.isFinite(taggedHeight)) return THREE.MathUtils.clamp(taggedHeight, 3, 90);
+  if (Number.isFinite(taggedHeight)) {
+    const skylineHeight =
+      taggedHeight > 180
+        ? taggedHeight * 0.62
+        : taggedHeight > 100
+          ? taggedHeight * 0.78
+          : taggedHeight;
+    return THREE.MathUtils.clamp(skylineHeight, 3, 195);
+  }
 
   const levels = Number.parseFloat(way.tags["building:levels"]);
-  if (Number.isFinite(levels)) return THREE.MathUtils.clamp(levels * 3.1, 3, 90);
+  if (Number.isFinite(levels)) return THREE.MathUtils.clamp(levels * 3.05, 3, 175);
 
   // Stała wartość zależna od ID zapobiega zmianom wysokości przy każdym odświeżeniu.
   return 8 + (Math.abs(way.id) % 80) / 10;
@@ -156,7 +177,7 @@ function getChunk(chunks, x, z) {
   return chunks.get(key);
 }
 
-function addRoad(chunks, way) {
+function addRoad(chunks, detailAnchors, way) {
   if (way.tags.area === "yes" || way.tags.highway === "construction") return [];
 
   const points = way.geometry?.map((point) => geoToWorld(point.lat, point.lon));
@@ -220,6 +241,20 @@ function addRoad(chunks, way) {
         minZ: Math.min(start.z, end.z) - halfWidth,
         maxZ: Math.max(start.z, end.z) + halfWidth,
       });
+
+      if (length > 8 && (Math.abs(way.id + index * 17) % 5 === 0)) {
+        const normalX = -dz / length;
+        const normalZ = dx / length;
+        const side = Math.abs(way.id + index) % 2 === 0 ? 1 : -1;
+        const offset = width / 2 + 3.1;
+        detailAnchors.push(
+          new THREE.Vector3(
+            centerX + normalX * offset * side,
+            0,
+            centerZ + normalZ * offset * side,
+          ),
+        );
+      }
 
       if (hasCenterMarking && length >= 5) {
         const dashLength = 2.7;
@@ -335,7 +370,10 @@ export async function buildWarsawMap(performanceProfile) {
   );
 
   const renderChunks = new Map();
-  const roadSurfaces = roads.flatMap((way) => addRoad(renderChunks, way));
+  const detailAnchors = [];
+  const roadSurfaces = roads.flatMap((way) =>
+    addRoad(renderChunks, detailAnchors, way),
+  );
 
   const buildingColliders = [];
   for (const way of buildings) {
@@ -345,18 +383,45 @@ export async function buildWarsawMap(performanceProfile) {
     chunk.buildings[building.materialIndex].push(building.geometry);
     buildingColliders.push(building.collider);
   }
+
+  const palacePosition = geoToWorld(52.23184, 21.0061);
+  const landmarks = createWarsawLandmarks(
+    performanceProfile.simpleMaterials,
+    palacePosition,
+  );
+  group.add(landmarks.group);
+  buildingColliders.push(...landmarks.colliders);
+
+  const buildingIndex = createSpatialIndex(buildingColliders);
+  const freeDetailAnchors = detailAnchors.filter(
+    (anchor) => !buildingIndex.queryPoint(anchor.x, anchor.z).some((building) =>
+      anchor.x >= building.minX &&
+      anchor.x <= building.maxX &&
+      anchor.z >= building.minZ &&
+      anchor.z <= building.maxZ
+    ),
+  );
+  group.add(
+    createUrbanDetails({
+      anchors: freeDetailAnchors,
+      profile: performanceProfile,
+    }),
+  );
   addRenderChunks(group, renderChunks, materials);
 
   return {
     group,
-    buildingIndex: createSpatialIndex(buildingColliders),
+    buildingIndex,
     roadIndex: createSpatialIndex(roadSurfaces),
     statistics: {
       roads: roads.length,
       buildings: buildings.length,
-      renderChunks: group.children.length,
+      renderChunks: group.children.filter((child) =>
+        child.name.startsWith("Sektor "),
+      ).length,
       renderObjects: group.children.reduce(
-        (total, chunk) => total + chunk.children.length,
+        (total, child) =>
+          total + (child.isGroup ? child.children.length : 1),
         0,
       ),
     },

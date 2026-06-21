@@ -14,6 +14,8 @@ Obecny prototyp zawiera:
 - lekki tryb 30 FPS zoptymalizowany pod słabsze komputery,
 - lekkich pieszych NPC działających jako instancje,
 - prosty system strzelania do NPC z raycastingiem i cooldownem,
+- proceduralne fasady, okna i miejski styl low-poly,
+- lekki model Pałacu Kultury oraz instancjonowane drzewa, latarnie i znaki,
 - prosty cel misji.
 
 ## Uruchomienie
