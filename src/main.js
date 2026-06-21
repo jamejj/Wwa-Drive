@@ -56,6 +56,7 @@ const cameraOffset = new THREE.Vector3();
 const cameraLookAhead = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
 const frameInterval = 1000 / performanceProfile.targetFps;
+const idleFrameInterval = 1000 / 15;
 let lastFrameTime = 0;
 let debugVisible = false;
 let diagnosticFrames = 0;
@@ -112,6 +113,9 @@ addEventListener("keydown", (event) => {
 });
 addEventListener("keyup", (event) => {
   keys[event.code] = false;
+});
+addEventListener("blur", () => {
+  for (const code in keys) keys[code] = false;
 });
 
 hud.elements.startButton.addEventListener("click", () => {
@@ -227,9 +231,26 @@ function updateCamera(delta) {
   camera.lookAt(player.position.x, player.position.y + 1, player.position.z - 3);
 }
 
+function isGameplayActive() {
+  return (
+    keys.KeyW ||
+    keys.KeyA ||
+    keys.KeyS ||
+    keys.KeyD ||
+    keys.ShiftLeft ||
+    keys.ShiftRight ||
+    Math.abs(state.carSpeed) > 0.05
+  );
+}
+
 function animate(timestamp) {
   requestAnimationFrame(animate);
-  const currentFrameInterval = state.gameStarted ? frameInterval : 100;
+  const gameplayActive = state.gameStarted && isGameplayActive();
+  const currentFrameInterval = state.gameStarted
+    ? gameplayActive
+      ? frameInterval
+      : idleFrameInterval
+    : 100;
   if (document.hidden || timestamp - lastFrameTime < currentFrameInterval) return;
   lastFrameTime =
     timestamp - ((timestamp - lastFrameTime) % currentFrameInterval);
@@ -242,7 +263,7 @@ function animate(timestamp) {
     else updatePlayer(delta);
     updateInteractions();
     updateGoal();
-    adaptiveQuality.update(delta);
+    if (gameplayActive) adaptiveQuality.update(delta);
   }
 
   updateCamera(delta);
