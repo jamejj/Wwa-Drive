@@ -53,6 +53,11 @@ function buildingHeight(tags) {
 }
 
 async function fetchMapData() {
+  const localResponse = await fetch("/warsaw-center.json");
+  if (localResponse.ok) {
+    return localResponse.json();
+  }
+
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
     try {
@@ -72,7 +77,7 @@ async function fetchMapData() {
     out tags geom;
   `;
 
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
+  const response = await fetch("https://overpass.kumi.systems/api/interpreter", {
     method: "POST",
     body: new URLSearchParams({ data: query }),
   });

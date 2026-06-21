@@ -6,6 +6,7 @@ sandbox inspirowany klasycznymi grami akcji z otwartym światem.
 Obecny prototyp zawiera:
 
 - fragment centrum Warszawy zbudowany na danych OpenStreetMap,
+- lokalną kopię danych mapy, dzięki której prototyp nie wymaga internetu,
 - prawdziwy układ ulic i obrysy budynków,
 - sterowaną postać i kamerę 3D,
 - samochód z możliwością wsiadania, wysiadania i jazdy,
