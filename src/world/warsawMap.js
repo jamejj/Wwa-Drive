@@ -19,6 +19,13 @@ const vehicleRoadMaterial = new THREE.MeshStandardMaterial({
   polygonOffsetFactor: -2,
   polygonOffsetUnits: -2,
 });
+const roadEdgeMaterial = new THREE.MeshStandardMaterial({
+  color: 0xb7b1a7,
+  roughness: 1,
+  polygonOffset: true,
+  polygonOffsetFactor: -1,
+  polygonOffsetUnits: -1,
+});
 const pedestrianRoadMaterial = new THREE.MeshStandardMaterial({
   color: 0xaaa59b,
   roughness: 1,
@@ -26,6 +33,23 @@ const pedestrianRoadMaterial = new THREE.MeshStandardMaterial({
   polygonOffsetFactor: -1,
   polygonOffsetUnits: -1,
 });
+const roadMarkingMaterial = new THREE.MeshBasicMaterial({
+  color: 0xf1eee3,
+  transparent: true,
+  opacity: 0.82,
+  depthWrite: false,
+  polygonOffset: true,
+  polygonOffsetFactor: -4,
+  polygonOffsetUnits: -4,
+});
+const buildingPalette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
+const buildingMaterials = buildingPalette.map((color) => [
+  new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color).multiplyScalar(0.72),
+    roughness: 1,
+  }),
+  new THREE.MeshStandardMaterial({ color, roughness: 0.88 }),
+]);
 
 export function geoToWorld(lat, lon) {
   return new THREE.Vector3(
@@ -118,6 +142,11 @@ function addRoad(group, way) {
   const material = isPedestrian ? pedestrianRoadMaterial : vehicleRoadMaterial;
   const roadY = isPedestrian ? 0.018 : 0.032;
   const roadSurfaces = [];
+  const hasCenterMarking =
+    !isPedestrian &&
+    ["motorway", "trunk", "primary", "secondary", "tertiary"].includes(
+      way.tags.highway,
+    );
 
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
@@ -126,6 +155,17 @@ function addRoad(group, way) {
     const dz = end.z - start.z;
     const length = Math.hypot(dx, dz);
     if (length < 0.2) continue;
+
+    if (!isPedestrian) {
+      const edgeGeometry = new THREE.PlaneGeometry(width + 2.2, length + 1.2);
+      edgeGeometry.rotateX(-Math.PI / 2);
+      const edge = new THREE.Mesh(edgeGeometry, roadEdgeMaterial);
+      edge.rotation.y = Math.atan2(dx, dz);
+      edge.position.set((start.x + end.x) / 2, 0.014, (start.z + end.z) / 2);
+      edge.receiveShadow = true;
+      edge.renderOrder = 0;
+      group.add(edge);
+    }
 
     // Płaskie pasy zamiast nakładających się pudełek usuwają efekt "przebłysków".
     const geometry = new THREE.PlaneGeometry(width, length + 0.45);
@@ -148,6 +188,30 @@ function addRoad(group, way) {
         minZ: Math.min(start.z, end.z) - halfWidth,
         maxZ: Math.max(start.z, end.z) + halfWidth,
       });
+
+      if (hasCenterMarking && length >= 5) {
+        const dashLength = 2.7;
+        const gapLength = 3.2;
+        const step = dashLength + gapLength;
+        const dashCount = Math.floor(length / step);
+        const directionX = dx / length;
+        const directionZ = dz / length;
+
+        for (let dashIndex = 0; dashIndex < dashCount; dashIndex += 1) {
+          const distance = -length / 2 + step / 2 + dashIndex * step;
+          const markingGeometry = new THREE.PlaneGeometry(0.14, dashLength);
+          markingGeometry.rotateX(-Math.PI / 2);
+          const marking = new THREE.Mesh(markingGeometry, roadMarkingMaterial);
+          marking.rotation.y = Math.atan2(dx, dz);
+          marking.position.set(
+            (start.x + end.x) / 2 + directionX * distance,
+            0.048,
+            (start.z + end.z) / 2 + directionZ * distance,
+          );
+          marking.renderOrder = 4;
+          group.add(marking);
+        }
+      }
     }
   }
   return roadSurfaces;
@@ -185,13 +249,9 @@ function addBuilding(group, way) {
   geometry.rotateX(-Math.PI / 2);
   geometry.computeVertexNormals();
 
-  const palette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
   const building = new THREE.Mesh(
     geometry,
-    new THREE.MeshStandardMaterial({
-      color: palette[Math.abs(way.id) % palette.length],
-      roughness: 0.9,
-    }),
+    buildingMaterials[Math.abs(way.id) % buildingMaterials.length],
   );
   building.position.y = 0.06;
   building.castShadow = true;
