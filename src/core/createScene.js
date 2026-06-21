@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-export function createScene(app) {
+export function createScene(app, performanceProfile) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xa8bfcb);
   scene.fog = new THREE.Fog(0xa8bfcb, 180, 680);
@@ -11,11 +11,11 @@ export function createScene(app) {
 
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    powerPreference: "high-performance",
+    powerPreference: "low-power",
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, performanceProfile.maxPixelRatio));
   renderer.setSize(innerWidth, innerHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = performanceProfile.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -26,8 +26,11 @@ export function createScene(app) {
 
   const sun = new THREE.DirectionalLight(0xfff0cf, 3);
   sun.position.set(-75, 110, 55);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = performanceProfile.shadows;
+  sun.shadow.mapSize.set(
+    performanceProfile.shadowMapSize,
+    performanceProfile.shadowMapSize,
+  );
   sun.shadow.camera.left = -100;
   sun.shadow.camera.right = 100;
   sun.shadow.camera.top = 100;

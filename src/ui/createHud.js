@@ -36,7 +36,8 @@ export function createHud() {
     elements.startButton.disabled = false;
     elements.startButton.textContent = "WEJDŹ DO CENTRUM";
     console.info(
-      `Mapa gotowa: ${statistics.roads} dróg, ${statistics.buildings} budynków.`,
+      `Mapa gotowa: ${statistics.roads} dróg, ${statistics.buildings} budynków, ` +
+        `${statistics.renderObjects} obiektów renderowania.`,
     );
   }
 

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 const CENTER = { lat: 52.2331, lon: 21.0065 };
 const BOUNDS = {
@@ -43,13 +44,9 @@ const roadMarkingMaterial = new THREE.MeshBasicMaterial({
   polygonOffsetUnits: -4,
 });
 const buildingPalette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
-const buildingMaterials = buildingPalette.map((color) => [
-  new THREE.MeshStandardMaterial({
-    color: new THREE.Color(color).multiplyScalar(0.72),
-    roughness: 1,
-  }),
-  new THREE.MeshStandardMaterial({ color, roughness: 0.88 }),
-]);
+const buildingMaterials = buildingPalette.map(
+  (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.9 }),
+);
 
 export function geoToWorld(lat, lon) {
   return new THREE.Vector3(
@@ -129,7 +126,15 @@ async function fetchMapData() {
   return data;
 }
 
-function addRoad(group, way) {
+function createRoadPlane(width, length, x, y, z, rotationY) {
+  const geometry = new THREE.PlaneGeometry(width, length);
+  geometry.rotateX(-Math.PI / 2);
+  geometry.rotateY(rotationY);
+  geometry.translate(x, y, z);
+  return geometry;
+}
+
+function addRoad(geometryBuckets, way) {
   if (way.tags.area === "yes" || way.tags.highway === "construction") return [];
 
   const points = way.geometry?.map((point) => geoToWorld(point.lat, point.lon));
@@ -139,7 +144,6 @@ function addRoad(group, way) {
   const isPedestrian = ["footway", "path", "pedestrian", "steps"].includes(
     way.tags.highway,
   );
-  const material = isPedestrian ? pedestrianRoadMaterial : vehicleRoadMaterial;
   const roadY = isPedestrian ? 0.018 : 0.032;
   const roadSurfaces = [];
   const hasCenterMarking =
@@ -157,25 +161,28 @@ function addRoad(group, way) {
     if (length < 0.2) continue;
 
     if (!isPedestrian) {
-      const edgeGeometry = new THREE.PlaneGeometry(width + 2.2, length + 1.2);
-      edgeGeometry.rotateX(-Math.PI / 2);
-      const edge = new THREE.Mesh(edgeGeometry, roadEdgeMaterial);
-      edge.rotation.y = Math.atan2(dx, dz);
-      edge.position.set((start.x + end.x) / 2, 0.014, (start.z + end.z) / 2);
-      edge.receiveShadow = true;
-      edge.renderOrder = 0;
-      group.add(edge);
+      geometryBuckets.edges.push(
+        createRoadPlane(
+          width + 2.2,
+          length + 1.2,
+          (start.x + end.x) / 2,
+          0.014,
+          (start.z + end.z) / 2,
+          Math.atan2(dx, dz),
+        ),
+      );
     }
 
     // Płaskie pasy zamiast nakładających się pudełek usuwają efekt "przebłysków".
-    const geometry = new THREE.PlaneGeometry(width, length + 0.45);
-    geometry.rotateX(-Math.PI / 2);
-    const segment = new THREE.Mesh(geometry, material);
-    segment.rotation.y = Math.atan2(dx, dz);
-    segment.position.set((start.x + end.x) / 2, roadY, (start.z + end.z) / 2);
-    segment.receiveShadow = true;
-    segment.renderOrder = isPedestrian ? 1 : 2;
-    group.add(segment);
+    const roadGeometry = createRoadPlane(
+      width,
+      length + 0.45,
+      (start.x + end.x) / 2,
+      roadY,
+      (start.z + end.z) / 2,
+      Math.atan2(dx, dz),
+    );
+    geometryBuckets[isPedestrian ? "pedestrian" : "roads"].push(roadGeometry);
 
     if (!isPedestrian) {
       const halfWidth = width / 2 + 0.6;
@@ -199,22 +206,34 @@ function addRoad(group, way) {
 
         for (let dashIndex = 0; dashIndex < dashCount; dashIndex += 1) {
           const distance = -length / 2 + step / 2 + dashIndex * step;
-          const markingGeometry = new THREE.PlaneGeometry(0.14, dashLength);
-          markingGeometry.rotateX(-Math.PI / 2);
-          const marking = new THREE.Mesh(markingGeometry, roadMarkingMaterial);
-          marking.rotation.y = Math.atan2(dx, dz);
-          marking.position.set(
-            (start.x + end.x) / 2 + directionX * distance,
-            0.048,
-            (start.z + end.z) / 2 + directionZ * distance,
+          geometryBuckets.markings.push(
+            createRoadPlane(
+              0.14,
+              dashLength,
+              (start.x + end.x) / 2 + directionX * distance,
+              0.048,
+              (start.z + end.z) / 2 + directionZ * distance,
+              Math.atan2(dx, dz),
+            ),
           );
-          marking.renderOrder = 4;
-          group.add(marking);
         }
       }
     }
   }
   return roadSurfaces;
+}
+
+function addMergedGeometry(group, geometries, material, renderOrder) {
+  if (geometries.length === 0) return;
+
+  const mergedGeometry = mergeGeometries(geometries);
+  for (const geometry of geometries) geometry.dispose();
+
+  const mesh = new THREE.Mesh(mergedGeometry, material);
+  mesh.receiveShadow = true;
+  mesh.renderOrder = renderOrder;
+  mesh.frustumCulled = true;
+  group.add(mesh);
 }
 
 function createBuildingCollider(way) {
@@ -231,7 +250,7 @@ function createBuildingCollider(way) {
   };
 }
 
-function addBuilding(group, way) {
+function createBuildingGeometry(way) {
   if (!way.geometry || way.geometry.length < 4) return null;
 
   const shape = new THREE.Shape();
@@ -249,16 +268,12 @@ function addBuilding(group, way) {
   geometry.rotateX(-Math.PI / 2);
   geometry.computeVertexNormals();
 
-  const building = new THREE.Mesh(
+  geometry.translate(0, 0.06, 0);
+  return {
     geometry,
-    buildingMaterials[Math.abs(way.id) % buildingMaterials.length],
-  );
-  building.position.y = 0.06;
-  building.castShadow = true;
-  building.receiveShadow = true;
-  building.renderOrder = 5;
-  group.add(building);
-  return createBuildingCollider(way);
+    materialIndex: Math.abs(way.id) % buildingMaterials.length,
+    collider: createBuildingCollider(way),
+  };
 }
 
 export async function buildWarsawMap() {
@@ -273,15 +288,38 @@ export async function buildWarsawMap() {
     (element) => element.type === "way" && element.tags?.building,
   );
 
-  const roadSurfaces = roads.flatMap((way) => addRoad(group, way));
-  const buildingColliders = buildings
-    .map((way) => addBuilding(group, way))
-    .filter(Boolean);
+  const geometryBuckets = {
+    edges: [],
+    roads: [],
+    pedestrian: [],
+    markings: [],
+  };
+  const roadSurfaces = roads.flatMap((way) => addRoad(geometryBuckets, way));
+  addMergedGeometry(group, geometryBuckets.edges, roadEdgeMaterial, 0);
+  addMergedGeometry(group, geometryBuckets.pedestrian, pedestrianRoadMaterial, 1);
+  addMergedGeometry(group, geometryBuckets.roads, vehicleRoadMaterial, 2);
+  addMergedGeometry(group, geometryBuckets.markings, roadMarkingMaterial, 4);
+
+  const buildingGeometryBuckets = buildingMaterials.map(() => []);
+  const buildingColliders = [];
+  for (const way of buildings) {
+    const building = createBuildingGeometry(way);
+    if (!building) continue;
+    buildingGeometryBuckets[building.materialIndex].push(building.geometry);
+    buildingColliders.push(building.collider);
+  }
+  buildingGeometryBuckets.forEach((geometries, index) => {
+    addMergedGeometry(group, geometries, buildingMaterials[index], 5);
+  });
 
   return {
     group,
     buildingColliders,
     roadSurfaces,
-    statistics: { roads: roads.length, buildings: buildings.length },
+    statistics: {
+      roads: roads.length,
+      buildings: buildings.length,
+      renderObjects: group.children.length,
+    },
   };
 }

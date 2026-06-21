@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import "./style.css";
 import { createScene } from "./core/createScene.js";
+import { getPerformanceProfile } from "./core/performanceProfile.js";
 import { createCar } from "./entities/createCar.js";
 import { createMissionMarker } from "./entities/createMissionMarker.js";
 import { createPlayer } from "./entities/createPlayer.js";
@@ -8,7 +9,11 @@ import { createHud } from "./ui/createHud.js";
 import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
 
-const { scene, camera, renderer } = createScene(document.querySelector("#app"));
+const performanceProfile = getPerformanceProfile();
+const { scene, camera, renderer } = createScene(
+  document.querySelector("#app"),
+  performanceProfile,
+);
 const hud = createHud();
 
 const spawnPoint = geoToWorld(52.23225, 21.00335);
@@ -41,6 +46,11 @@ const playerDirection = new THREE.Vector3();
 const targetCamera = new THREE.Vector3();
 const verticalAxis = new THREE.Vector3(0, 1, 0);
 const previousPosition = new THREE.Vector3();
+const cameraOffset = new THREE.Vector3();
+const cameraLookAhead = new THREE.Vector3();
+const cameraLookTarget = new THREE.Vector3();
+const frameInterval = 1000 / performanceProfile.targetFps;
+let lastFrameTime = 0;
 let buildingColliders = [];
 let roadSurfaces = [];
 
@@ -184,17 +194,15 @@ function updateGoal() {
 
 function updateCamera(delta) {
   if (state.isDriving) {
-    const cameraOffset = new THREE.Vector3(0, 7.5, -12).applyAxisAngle(
-      verticalAxis,
-      car.rotation.y,
-    );
+    cameraOffset.set(0, 7.5, -12).applyAxisAngle(verticalAxis, car.rotation.y);
     targetCamera.copy(car.position).add(cameraOffset);
     camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4.5));
-    const lookAhead = new THREE.Vector3(0, 1.2, 7).applyAxisAngle(
+    cameraLookAhead.set(0, 1.2, 7).applyAxisAngle(
       verticalAxis,
       car.rotation.y,
     );
-    camera.lookAt(car.position.clone().add(lookAhead));
+    cameraLookTarget.copy(car.position).add(cameraLookAhead);
+    camera.lookAt(cameraLookTarget);
     return;
   }
 
@@ -204,6 +212,12 @@ function updateCamera(delta) {
 }
 
 function animate(timestamp) {
+  requestAnimationFrame(animate);
+  const currentFrameInterval = state.gameStarted ? frameInterval : 100;
+  if (document.hidden || timestamp - lastFrameTime < currentFrameInterval) return;
+  lastFrameTime =
+    timestamp - ((timestamp - lastFrameTime) % currentFrameInterval);
+
   timer.update(timestamp);
   const delta = Math.min(timer.getDelta(), 0.05);
 
@@ -218,10 +232,9 @@ function animate(timestamp) {
   marker.rotation.y += delta * 0.7;
   markerRing.scale.setScalar(1 + Math.sin(timer.getElapsed() * 3) * 0.08);
   renderer.render(scene, camera);
-  requestAnimationFrame(animate);
 }
 
-animate();
+requestAnimationFrame(animate);
 
 try {
   const map = await buildWarsawMap();
@@ -229,6 +242,9 @@ try {
   buildingColliders = map.buildingColliders;
   roadSurfaces = map.roadSurfaces;
   hud.setMapReady(map.statistics);
+  console.info(
+    `Tryb wydajności: ${performanceProfile.name}, limit ${performanceProfile.targetFps} FPS.`,
+  );
 } catch (error) {
   hud.setMapError(error);
 }

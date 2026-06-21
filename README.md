@@ -11,6 +11,7 @@ Obecny prototyp zawiera:
 - sterowaną postać i kamerę 3D,
 - samochód z możliwością wsiadania, wysiadania i jazdy,
 - kolizje z budynkami i wolniejszą jazdę poza drogami,
+- lekki tryb 30 FPS zoptymalizowany pod słabsze komputery,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -48,6 +49,9 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `src/world` — mapa Warszawy, drogi i kolizje,
 - `src/ui` — interfejs gry,
 - `src/main.js` — połączenie systemów i główna pętla gry.
+
+Domyślnie gra uruchamia lekki profil `school`. Mocniejsze profile można włączyć
+parametrem adresu: `?quality=balanced` albo `?quality=high`.
 
 ## Plan rozwoju
 
