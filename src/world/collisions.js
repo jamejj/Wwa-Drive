@@ -30,6 +30,9 @@ function squaredDistanceToSegment(x, z, start, end) {
 
 export function createSpatialIndex(items, cellSize = 32) {
   const cells = new Map();
+  const queryResults = [];
+  const querySeen = new Set();
+  const emptyCell = [];
 
   for (const item of items) {
     const minCellX = Math.floor(item.minX / cellSize);
@@ -48,7 +51,8 @@ export function createSpatialIndex(items, cellSize = 32) {
 
   return {
     query(minX, minZ, maxX, maxZ) {
-      const found = new Set();
+      queryResults.length = 0;
+      querySeen.clear();
       const minCellX = Math.floor(minX / cellSize);
       const maxCellX = Math.floor(maxX / cellSize);
       const minCellZ = Math.floor(minZ / cellSize);
@@ -58,10 +62,18 @@ export function createSpatialIndex(items, cellSize = 32) {
         for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
           const cell = cells.get(`${cellX}:${cellZ}`);
           if (!cell) continue;
-          for (const item of cell) found.add(item);
+          for (const item of cell) {
+            if (querySeen.has(item)) continue;
+            querySeen.add(item);
+            queryResults.push(item);
+          }
         }
       }
-      return found;
+      return queryResults;
+    },
+    queryPoint(x, z) {
+      return cells.get(`${Math.floor(x / cellSize)}:${Math.floor(z / cellSize)}`) ??
+        emptyCell;
     },
   };
 }
@@ -100,12 +112,7 @@ export function collidesWithBuildings(position, radius, spatialIndex) {
 }
 
 export function isPointOnRoad(position, roadSurfaces) {
-  const nearbyRoads = roadSurfaces.query(
-    position.x,
-    position.z,
-    position.x,
-    position.z,
-  );
+  const nearbyRoads = roadSurfaces.queryPoint(position.x, position.z);
 
   for (const road of nearbyRoads) {
     if (

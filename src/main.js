@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import "./style.css";
+import { createAdaptiveQuality } from "./core/adaptiveQuality.js";
 import { createScene } from "./core/createScene.js";
 import { getPerformanceProfile } from "./core/performanceProfile.js";
 import { createCar } from "./entities/createCar.js";
@@ -10,10 +11,15 @@ import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
 
 const performanceProfile = getPerformanceProfile();
-const { scene, camera, renderer } = createScene(
+const { scene, camera, renderer, initialPixelRatio } = createScene(
   document.querySelector("#app"),
   performanceProfile,
 );
+const adaptiveQuality = createAdaptiveQuality({
+  renderer,
+  profile: performanceProfile,
+  initialPixelRatio,
+});
 const hud = createHud();
 
 const spawnPoint = geoToWorld(52.23225, 21.00335);
@@ -51,6 +57,9 @@ const cameraLookAhead = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
 const frameInterval = 1000 / performanceProfile.targetFps;
 let lastFrameTime = 0;
+let debugVisible = false;
+let diagnosticFrames = 0;
+let diagnosticTime = 0;
 let buildingIndex = null;
 let roadIndex = null;
 
@@ -91,6 +100,13 @@ function toggleVehicle() {
 
 addEventListener("keydown", (event) => {
   keys[event.code] = true;
+  if (event.code === "F3" && !event.repeat) {
+    event.preventDefault();
+    debugVisible = !debugVisible;
+    hud.setPerformanceVisible(debugVisible);
+    diagnosticFrames = 0;
+    diagnosticTime = 0;
+  }
   if (event.code === "KeyE" && !event.repeat && state.gameStarted) toggleVehicle();
   if (event.code === "KeyR") resetGame();
 });
@@ -226,24 +242,41 @@ function animate(timestamp) {
     else updatePlayer(delta);
     updateInteractions();
     updateGoal();
+    adaptiveQuality.update(delta);
   }
 
   updateCamera(delta);
   marker.rotation.y += delta * 0.7;
   markerRing.scale.setScalar(1 + Math.sin(timer.getElapsed() * 3) * 0.08);
   renderer.render(scene, camera);
+
+  if (debugVisible) {
+    diagnosticFrames += 1;
+    diagnosticTime += delta;
+    if (diagnosticTime >= 1) {
+      hud.updatePerformance({
+        fps: diagnosticFrames / diagnosticTime,
+        calls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        pixelRatio: adaptiveQuality.getPixelRatio(),
+      });
+      diagnosticFrames = 0;
+      diagnosticTime = 0;
+    }
+  }
 }
 
 requestAnimationFrame(animate);
 
 try {
-  const map = await buildWarsawMap();
+  const map = await buildWarsawMap(performanceProfile);
   scene.add(map.group);
   buildingIndex = map.buildingIndex;
   roadIndex = map.roadIndex;
   hud.setMapReady(map.statistics);
   console.info(
-    `Tryb wydajności: ${performanceProfile.name}, limit ${performanceProfile.targetFps} FPS.`,
+    `Tryb wydajności: ${performanceProfile.name}, limit ` +
+      `${performanceProfile.targetFps} FPS, pixel ratio ${adaptiveQuality.getPixelRatio()}.`,
   );
 } catch (error) {
   hud.setMapError(error);

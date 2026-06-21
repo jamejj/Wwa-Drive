@@ -34,6 +34,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `W/S` — gaz i hamulec podczas jazdy
 - `A/D` — skręcanie podczas jazdy
 - `R` — powrót na pozycję startową
+- `F3` — panel diagnostyczny wydajności
 
 ## Technologie
 
@@ -52,6 +53,9 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 
 Domyślnie gra uruchamia lekki profil `school`. Mocniejsze profile można włączyć
 parametrem adresu: `?quality=balanced` albo `?quality=high`.
+
+Po aktualizacji danych OpenStreetMap można je odchudzić poleceniem
+`npm run optimize:map`.
 
 ## Plan rozwoju
 

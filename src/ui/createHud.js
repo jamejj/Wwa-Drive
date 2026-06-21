@@ -9,6 +9,11 @@ export function createHud() {
     primaryControl: document.querySelector("#primary-control"),
     secondaryControl: document.querySelector("#secondary-control"),
     missionText: document.querySelector(".mission p"),
+    performancePanel: document.querySelector("#performance-panel"),
+    performanceFps: document.querySelector("#performance-fps"),
+    performanceCalls: document.querySelector("#performance-calls"),
+    performanceTriangles: document.querySelector("#performance-triangles"),
+    performanceScale: document.querySelector("#performance-scale"),
   };
   elements.actionPromptText = elements.actionPrompt.querySelector("span");
 
@@ -37,7 +42,7 @@ export function createHud() {
     elements.startButton.textContent = "WEJDŹ DO CENTRUM";
     console.info(
       `Mapa gotowa: ${statistics.roads} dróg, ${statistics.buildings} budynków, ` +
-        `${statistics.renderObjects} obiektów renderowania.`,
+        `${statistics.renderChunks} sektorów i ${statistics.renderObjects} warstw.`,
     );
   }
 
@@ -48,11 +53,25 @@ export function createHud() {
       "Nie udało się odczytać lokalnych danych mapy. Uruchom projekt przez Vite.";
   }
 
+  function setPerformanceVisible(visible) {
+    elements.performancePanel.classList.toggle("visible", visible);
+  }
+
+  function updatePerformance({ fps, calls, triangles, pixelRatio }) {
+    elements.performanceFps.textContent = `FPS: ${Math.round(fps)}`;
+    elements.performanceCalls.textContent = `Draw calls: ${calls}`;
+    elements.performanceTriangles.textContent =
+      `Trójkąty: ${Math.round(triangles).toLocaleString("pl-PL")}`;
+    elements.performanceScale.textContent = `Skala: ${pixelRatio.toFixed(2)}x`;
+  }
+
   return {
     elements,
     setDrivingMode,
     setVehiclePrompt,
     setMapReady,
     setMapError,
+    setPerformanceVisible,
+    updatePerformance,
   };
 }

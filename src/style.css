@@ -135,6 +135,32 @@ canvas {
   transform: translate(-50%, 0);
 }
 
+.performance-panel {
+  position: absolute;
+  top: 95px;
+  left: 32px;
+  display: none;
+  min-width: 150px;
+  padding: 10px 12px;
+  border-left: 2px solid #ffd91a;
+  background: rgb(10 11 15 / 82%);
+  flex-direction: column;
+  gap: 3px;
+  color: rgb(255 255 255 / 72%);
+  font: 10px/1.35 monospace;
+}
+
+.performance-panel.visible {
+  display: flex;
+}
+
+.performance-panel strong {
+  margin-bottom: 3px;
+  color: #ffd91a;
+  font: 800 11px "Barlow Condensed", sans-serif;
+  letter-spacing: 0.12em;
+}
+
 .attribution {
   position: absolute;
   right: 20px;
@@ -297,6 +323,11 @@ kbd {
 
   .speedometer strong {
     font-size: 30px;
+  }
+
+  .performance-panel {
+    top: 140px;
+    left: 20px;
   }
 
   .attribution {

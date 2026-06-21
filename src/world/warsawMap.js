@@ -13,41 +13,44 @@ const CACHE_KEY = "wawa-drive-osm-center-v1";
 
 const metersPerLongitude = 111_320 * Math.cos((CENTER.lat * Math.PI) / 180);
 const metersPerLatitude = 110_540;
+const RENDER_CHUNK_SIZE = 120;
 
-const vehicleRoadMaterial = new THREE.MeshStandardMaterial({
-  color: 0x303238,
-  roughness: 0.97,
-  polygonOffset: true,
-  polygonOffsetFactor: -2,
-  polygonOffsetUnits: -2,
-});
-const roadEdgeMaterial = new THREE.MeshStandardMaterial({
-  color: 0xb7b1a7,
-  roughness: 1,
-  polygonOffset: true,
-  polygonOffsetFactor: -1,
-  polygonOffsetUnits: -1,
-});
-const pedestrianRoadMaterial = new THREE.MeshStandardMaterial({
-  color: 0xaaa59b,
-  roughness: 1,
-  polygonOffset: true,
-  polygonOffsetFactor: -1,
-  polygonOffsetUnits: -1,
-});
-const roadMarkingMaterial = new THREE.MeshBasicMaterial({
-  color: 0xf1eee3,
-  transparent: true,
-  opacity: 0.82,
-  depthWrite: false,
-  polygonOffset: true,
-  polygonOffsetFactor: -4,
-  polygonOffsetUnits: -4,
-});
 const buildingPalette = [0xa8947e, 0xb8ad9d, 0x897f78, 0xc1b7a4, 0x8f999d];
-const buildingMaterials = buildingPalette.map(
-  (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.9 }),
-);
+
+function createMaterials(simpleMaterials) {
+  const surfaceMaterial = (color, extra = {}) =>
+    simpleMaterials
+      ? new THREE.MeshLambertMaterial({ color, ...extra })
+      : new THREE.MeshStandardMaterial({ color, roughness: 0.95, ...extra });
+
+  return {
+    vehicleRoad: surfaceMaterial(0x303238, {
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
+    roadEdge: surfaceMaterial(0xb7b1a7, {
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
+    pedestrianRoad: surfaceMaterial(0xaaa59b, {
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
+    roadMarking: new THREE.MeshBasicMaterial({
+      color: 0xf1eee3,
+      transparent: true,
+      opacity: 0.82,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+    }),
+    buildings: buildingPalette.map((color) => surfaceMaterial(color)),
+  };
+}
 
 export function geoToWorld(lat, lon) {
   return new THREE.Vector3(
@@ -135,7 +138,25 @@ function createRoadPlane(width, length, x, y, z, rotationY) {
   return geometry;
 }
 
-function addRoad(geometryBuckets, way) {
+function chunkKey(x, z) {
+  return `${Math.floor(x / RENDER_CHUNK_SIZE)}:${Math.floor(z / RENDER_CHUNK_SIZE)}`;
+}
+
+function getChunk(chunks, x, z) {
+  const key = chunkKey(x, z);
+  if (!chunks.has(key)) {
+    chunks.set(key, {
+      edges: [],
+      roads: [],
+      pedestrian: [],
+      markings: [],
+      buildings: buildingPalette.map(() => []),
+    });
+  }
+  return chunks.get(key);
+}
+
+function addRoad(chunks, way) {
   if (way.tags.area === "yes" || way.tags.highway === "construction") return [];
 
   const points = way.geometry?.map((point) => geoToWorld(point.lat, point.lon));
@@ -160,15 +181,18 @@ function addRoad(geometryBuckets, way) {
     const dz = end.z - start.z;
     const length = Math.hypot(dx, dz);
     if (length < 0.2) continue;
+    const centerX = (start.x + end.x) / 2;
+    const centerZ = (start.z + end.z) / 2;
+    const geometryBuckets = getChunk(chunks, centerX, centerZ);
 
     if (!isPedestrian) {
       geometryBuckets.edges.push(
         createRoadPlane(
           width + 2.2,
           length + 1.2,
-          (start.x + end.x) / 2,
+          centerX,
           0.014,
-          (start.z + end.z) / 2,
+          centerZ,
           Math.atan2(dx, dz),
         ),
       );
@@ -178,9 +202,9 @@ function addRoad(geometryBuckets, way) {
     const roadGeometry = createRoadPlane(
       width,
       length + 0.45,
-      (start.x + end.x) / 2,
+      centerX,
       roadY,
-      (start.z + end.z) / 2,
+      centerZ,
       Math.atan2(dx, dz),
     );
     geometryBuckets[isPedestrian ? "pedestrian" : "roads"].push(roadGeometry);
@@ -211,9 +235,9 @@ function addRoad(geometryBuckets, way) {
             createRoadPlane(
               0.14,
               dashLength,
-              (start.x + end.x) / 2 + directionX * distance,
+              centerX + directionX * distance,
               0.048,
-              (start.z + end.z) / 2 + directionZ * distance,
+              centerZ + directionZ * distance,
               Math.atan2(dx, dz),
             ),
           );
@@ -270,17 +294,38 @@ function createBuildingGeometry(way) {
   geometry.computeVertexNormals();
 
   geometry.translate(0, 0.06, 0);
+  const collider = createBuildingCollider(way);
   return {
     geometry,
-    materialIndex: Math.abs(way.id) % buildingMaterials.length,
-    collider: createBuildingCollider(way),
+    materialIndex: Math.abs(way.id) % buildingPalette.length,
+    collider,
+    centerX: (collider.minX + collider.maxX) / 2,
+    centerZ: (collider.minZ + collider.maxZ) / 2,
   };
 }
 
-export async function buildWarsawMap() {
+function addRenderChunks(group, chunks, materials) {
+  for (const [key, geometries] of chunks) {
+    const chunk = new THREE.Group();
+    chunk.name = `Sektor ${key}`;
+
+    addMergedGeometry(chunk, geometries.edges, materials.roadEdge, 0);
+    addMergedGeometry(chunk, geometries.pedestrian, materials.pedestrianRoad, 1);
+    addMergedGeometry(chunk, geometries.roads, materials.vehicleRoad, 2);
+    addMergedGeometry(chunk, geometries.markings, materials.roadMarking, 4);
+    geometries.buildings.forEach((buildingGeometries, index) => {
+      addMergedGeometry(chunk, buildingGeometries, materials.buildings[index], 5);
+    });
+
+    if (chunk.children.length > 0) group.add(chunk);
+  }
+}
+
+export async function buildWarsawMap(performanceProfile) {
   const data = await fetchMapData();
   const group = new THREE.Group();
   group.name = "Warszawa — centrum (OpenStreetMap)";
+  const materials = createMaterials(performanceProfile.simpleMaterials);
 
   const roads = data.elements.filter(
     (element) => element.type === "way" && element.tags?.highway,
@@ -289,29 +334,18 @@ export async function buildWarsawMap() {
     (element) => element.type === "way" && element.tags?.building,
   );
 
-  const geometryBuckets = {
-    edges: [],
-    roads: [],
-    pedestrian: [],
-    markings: [],
-  };
-  const roadSurfaces = roads.flatMap((way) => addRoad(geometryBuckets, way));
-  addMergedGeometry(group, geometryBuckets.edges, roadEdgeMaterial, 0);
-  addMergedGeometry(group, geometryBuckets.pedestrian, pedestrianRoadMaterial, 1);
-  addMergedGeometry(group, geometryBuckets.roads, vehicleRoadMaterial, 2);
-  addMergedGeometry(group, geometryBuckets.markings, roadMarkingMaterial, 4);
+  const renderChunks = new Map();
+  const roadSurfaces = roads.flatMap((way) => addRoad(renderChunks, way));
 
-  const buildingGeometryBuckets = buildingMaterials.map(() => []);
   const buildingColliders = [];
   for (const way of buildings) {
     const building = createBuildingGeometry(way);
     if (!building) continue;
-    buildingGeometryBuckets[building.materialIndex].push(building.geometry);
+    const chunk = getChunk(renderChunks, building.centerX, building.centerZ);
+    chunk.buildings[building.materialIndex].push(building.geometry);
     buildingColliders.push(building.collider);
   }
-  buildingGeometryBuckets.forEach((geometries, index) => {
-    addMergedGeometry(group, geometries, buildingMaterials[index], 5);
-  });
+  addRenderChunks(group, renderChunks, materials);
 
   return {
     group,
@@ -320,7 +354,11 @@ export async function buildWarsawMap() {
     statistics: {
       roads: roads.length,
       buildings: buildings.length,
-      renderObjects: group.children.length,
+      renderChunks: group.children.length,
+      renderObjects: group.children.reduce(
+        (total, chunk) => total + chunk.children.length,
+        0,
+      ),
     },
   };
 }

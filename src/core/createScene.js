@@ -3,17 +3,30 @@ import * as THREE from "three";
 export function createScene(app, performanceProfile) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xa8bfcb);
-  scene.fog = new THREE.Fog(0xa8bfcb, 180, 680);
+  scene.fog = new THREE.Fog(
+    0xa8bfcb,
+    performanceProfile.viewDistance * 0.48,
+    performanceProfile.viewDistance * 0.92,
+  );
 
   // Wyższa wartość near poprawia precyzję bufora głębi i ogranicza migotanie powierzchni.
-  const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.4, 850);
+  const camera = new THREE.PerspectiveCamera(
+    55,
+    innerWidth / innerHeight,
+    0.4,
+    performanceProfile.viewDistance,
+  );
   camera.position.set(12, 14, 18);
 
   const renderer = new THREE.WebGLRenderer({
-    antialias: true,
+    antialias: performanceProfile.antialias,
     powerPreference: "low-power",
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, performanceProfile.maxPixelRatio));
+  const initialPixelRatio = Math.min(
+    devicePixelRatio,
+    performanceProfile.maxPixelRatio,
+  );
+  renderer.setPixelRatio(initialPixelRatio);
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = performanceProfile.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -37,9 +50,12 @@ export function createScene(app, performanceProfile) {
   sun.shadow.camera.bottom = -100;
   scene.add(sun);
 
+  const groundMaterial = performanceProfile.simpleMaterials
+    ? new THREE.MeshLambertMaterial({ color: 0x667b5a })
+    : new THREE.MeshStandardMaterial({ color: 0x667b5a, roughness: 1 });
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(1500, 1400),
-    new THREE.MeshStandardMaterial({ color: 0x667b5a, roughness: 1 }),
+    groundMaterial,
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -53,5 +69,5 @@ export function createScene(app, performanceProfile) {
   };
   addEventListener("resize", handleResize);
 
-  return { scene, camera, renderer };
+  return { scene, camera, renderer, initialPixelRatio };
 }
