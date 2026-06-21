@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#11131a" />
+    <title>WAWA DRIVE — prototyp</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div class="hud">
+      <div class="brand">
+        <span>WAWA</span>
+        <strong>DRIVE</strong>
+      </div>
+      <div class="mission">
+        <small>PIERWSZY CEL</small>
+        <p>Przejdź do żółtego znacznika</p>
+      </div>
+      <div class="controls">
+        <span><kbd>WASD</kbd> ruch</span>
+        <span><kbd>SHIFT</kbd> bieg</span>
+        <span><kbd>R</kbd> restart</span>
+      </div>
+      <div class="attribution">Dane mapy © OpenStreetMap contributors</div>
+    </div>
+
+    <div class="start-screen" id="start-screen">
+      <div class="start-card">
+        <p class="eyebrow">PROTOTYP 01</p>
+        <h1>WAWA<br /><span>DRIVE</span></h1>
+        <p>Mały kawałek miasta. Wielkie plany.</p>
+        <button id="start-button" disabled>WCZYTYWANIE WARSZAWY…</button>
+        <small>sterowanie: W A S D</small>
+      </div>
+    </div>
+
+    <div class="message" id="message">
+      <strong>CEL OSIĄGNIĘTY</strong>
+      <span>Pierwszy spacer po mieście zaliczony.</span>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
