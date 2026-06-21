@@ -7,6 +7,7 @@ import { createCar } from "./entities/createCar.js";
 import { createMissionMarker } from "./entities/createMissionMarker.js";
 import { createPedestrianSystem } from "./entities/createPedestrianSystem.js";
 import { createPlayer } from "./entities/createPlayer.js";
+import { createWeaponSystem } from "./entities/createWeaponSystem.js";
 import { createHud } from "./ui/createHud.js";
 import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
@@ -65,6 +66,7 @@ let diagnosticTime = 0;
 let buildingIndex = null;
 let roadIndex = null;
 let pedestrianSystem = null;
+let weaponSystem = null;
 
 function resetGame() {
   player.position.copy(spawnPoint);
@@ -124,6 +126,13 @@ hud.elements.startButton.addEventListener("click", () => {
   state.gameStarted = true;
   hud.elements.startScreen.classList.add("hidden");
   hud.setDrivingMode(false);
+  hud.setCrosshairVisible(true);
+  renderer.domElement.classList.add("game-active");
+});
+
+renderer.domElement.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || !state.gameStarted) return;
+  weaponSystem?.shoot(event.timeStamp);
 });
 
 function updatePlayer(delta) {
@@ -267,6 +276,7 @@ function animate(timestamp) {
     updateGoal();
     const focusPosition = state.isDriving ? car.position : player.position;
     pedestrianSystem?.update(delta, timer.getElapsed(), focusPosition);
+    weaponSystem?.update(delta);
     if (gameplayActive) adaptiveQuality.update(delta);
   }
 
@@ -304,6 +314,13 @@ try {
     buildingIndex,
   });
   scene.add(pedestrianSystem.group);
+  weaponSystem = createWeaponSystem({
+    camera,
+    scene,
+    getTargets: () => pedestrianSystem.raycastTargets,
+    onNpcHit: (index) => pedestrianSystem.hitNpc(index),
+    onShot: (hit) => hud.pulseCrosshair(hit),
+  });
   hud.setMapReady(map.statistics);
   console.info(
     `Tryb wydajności: ${performanceProfile.name}, limit ` +

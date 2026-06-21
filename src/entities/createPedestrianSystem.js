@@ -53,30 +53,45 @@ export function createPedestrianSystem({
   for (const mesh of [torsos, legs, heads]) {
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
+    // NPC są przenoszeni wokół gracza; szeroka sfera utrzymuje poprawny raycast
+    // bez kosztownego przeliczania boundsów w każdej klatce.
+    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 5000);
     group.add(mesh);
   }
 
   const shirtColors = [0xd14b45, 0x4776b7, 0xd5a43d, 0x58a36c, 0x8b5da8, 0xd8d2c4];
   const trouserColors = [0x202633, 0x34404e, 0x4b403b, 0x253a35];
+  const shirtColorByNpc = [];
+  const trouserColorByNpc = [];
+  const skinColor = new THREE.Color(0xd7a078);
+  const hitColor = new THREE.Color(0xff3328);
   const pedestrians = [];
 
   for (let index = 0; index < count; index += 1) {
     const position = findFreePosition(spawnCenter, buildingIndex);
+    const shirtColor = new THREE.Color(shirtColors[index % shirtColors.length]);
+    const trouserColor = new THREE.Color(
+      trouserColors[index % trouserColors.length],
+    );
+    shirtColorByNpc.push(shirtColor);
+    trouserColorByNpc.push(trouserColor);
     pedestrians.push({
       position,
       angle: Math.random() * Math.PI * 2,
       speed: randomRange(0.65, 1.25),
       turnTimer: randomRange(1.5, 5),
       phase: Math.random() * Math.PI * 2,
+      active: true,
+      hitTimer: 0,
     });
 
-    color.set(shirtColors[index % shirtColors.length]);
-    torsos.setColorAt(index, color);
-    color.set(trouserColors[index % trouserColors.length]);
-    legs.setColorAt(index, color);
+    torsos.setColorAt(index, shirtColor);
+    legs.setColorAt(index, trouserColor);
+    heads.setColorAt(index, skinColor);
   }
   torsos.instanceColor.needsUpdate = true;
   legs.instanceColor.needsUpdate = true;
+  heads.instanceColor.needsUpdate = true;
 
   const previousPosition = new THREE.Vector3();
 
@@ -97,6 +112,21 @@ export function createPedestrianSystem({
   function update(delta, elapsed, focusPosition) {
     for (let index = 0; index < pedestrians.length; index += 1) {
       const pedestrian = pedestrians[index];
+
+      if (pedestrian.hitTimer > 0) {
+        pedestrian.hitTimer -= delta;
+        if (pedestrian.hitTimer <= 0) {
+          pedestrian.active = false;
+          dummy.position.copy(pedestrian.position);
+          dummy.scale.setScalar(0);
+          dummy.updateMatrix();
+          legs.setMatrixAt(index, dummy.matrix);
+          torsos.setMatrixAt(index, dummy.matrix);
+          heads.setMatrixAt(index, dummy.matrix);
+        }
+        continue;
+      }
+      if (!pedestrian.active) continue;
 
       if (pedestrian.position.distanceToSquared(focusPosition) > 95 * 95) {
         relocate(pedestrian, focusPosition);
@@ -142,6 +172,26 @@ export function createPedestrianSystem({
     heads.instanceMatrix.needsUpdate = true;
   }
 
+  function hitNpc(index) {
+    const pedestrian = pedestrians[index];
+    if (!pedestrian?.active || pedestrian.hitTimer > 0) return false;
+
+    pedestrian.hitTimer = 0.11;
+    torsos.setColorAt(index, hitColor);
+    legs.setColorAt(index, hitColor);
+    heads.setColorAt(index, hitColor);
+    torsos.instanceColor.needsUpdate = true;
+    legs.instanceColor.needsUpdate = true;
+    heads.instanceColor.needsUpdate = true;
+    return true;
+  }
+
   update(0, 0, spawnCenter);
-  return { group, update, count };
+  return {
+    group,
+    update,
+    count,
+    raycastTargets: [torsos, heads, legs],
+    hitNpc,
+  };
 }

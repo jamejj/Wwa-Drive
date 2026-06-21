@@ -14,6 +14,7 @@ export function createHud() {
     performanceCalls: document.querySelector("#performance-calls"),
     performanceTriangles: document.querySelector("#performance-triangles"),
     performanceScale: document.querySelector("#performance-scale"),
+    crosshair: document.querySelector("#crosshair"),
   };
   elements.actionPromptText = elements.actionPrompt.querySelector("span");
 
@@ -65,6 +66,24 @@ export function createHud() {
     elements.performanceScale.textContent = `Skala: ${pixelRatio.toFixed(2)}x`;
   }
 
+  let crosshairTimer;
+
+  function setCrosshairVisible(visible) {
+    elements.crosshair.classList.toggle("visible", visible);
+  }
+
+  function pulseCrosshair(hit) {
+    clearTimeout(crosshairTimer);
+    elements.crosshair.classList.remove("shot", "hit");
+    // Wymuszenie ponownego uruchomienia krótkiego przejścia CSS.
+    void elements.crosshair.offsetWidth;
+    elements.crosshair.classList.add("shot");
+    if (hit) elements.crosshair.classList.add("hit");
+    crosshairTimer = setTimeout(() => {
+      elements.crosshair.classList.remove("shot", "hit");
+    }, 90);
+  }
+
   return {
     elements,
     setDrivingMode,
@@ -73,5 +92,7 @@ export function createHud() {
     setMapError,
     setPerformanceVisible,
     updatePerformance,
+    setCrosshairVisible,
+    pulseCrosshair,
   };
 }

@@ -13,6 +13,7 @@ Obecny prototyp zawiera:
 - kolizje z budynkami i wolniejszą jazdę poza drogami,
 - lekki tryb 30 FPS zoptymalizowany pod słabsze komputery,
 - lekkich pieszych NPC działających jako instancje,
+- prosty system strzelania do NPC z raycastingiem i cooldownem,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -36,6 +37,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `A/D` — skręcanie podczas jazdy
 - `R` — powrót na pozycję startową
 - `F3` — panel diagnostyczny wydajności
+- lewy przycisk myszy — strzał w kierunku celownika
 
 ## Technologie
 

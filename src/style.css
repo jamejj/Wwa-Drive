@@ -22,6 +22,10 @@ canvas {
   display: block;
 }
 
+canvas.game-active {
+  cursor: none;
+}
+
 .hud {
   position: fixed;
   inset: 0;
@@ -131,6 +135,72 @@ canvas {
 .action-prompt.visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: none;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+}
+
+.crosshair.visible {
+  display: block;
+}
+
+.crosshair::before,
+.crosshair::after,
+.crosshair span::before,
+.crosshair span::after {
+  position: absolute;
+  content: "";
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 0 2px rgb(0 0 0 / 80%);
+  transition: background 70ms ease, transform 70ms ease;
+}
+
+.crosshair::before,
+.crosshair::after {
+  top: 9px;
+  width: 6px;
+  height: 2px;
+}
+
+.crosshair::before {
+  left: 0;
+}
+
+.crosshair::after {
+  right: 0;
+}
+
+.crosshair span::before,
+.crosshair span::after {
+  left: 9px;
+  width: 2px;
+  height: 6px;
+}
+
+.crosshair span::before {
+  top: 0;
+}
+
+.crosshair span::after {
+  bottom: 0;
+}
+
+.crosshair.shot {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.crosshair.hit::before,
+.crosshair.hit::after,
+.crosshair.hit span::before,
+.crosshair.hit span::after {
+  background: #ff4238;
 }
 
 .performance-panel {
