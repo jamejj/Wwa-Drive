@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import "./style.css";
+import { createRadioSystem } from "./audio/createRadioSystem.js";
 import { createAdaptiveQuality } from "./core/adaptiveQuality.js";
 import { createScene } from "./core/createScene.js";
 import { getPerformanceProfile } from "./core/performanceProfile.js";
@@ -35,6 +36,9 @@ const hud = createHud(locations, activeLocation, (location) => {
   const url = new URL(window.location.href);
   url.searchParams.set("location", location.id);
   window.location.assign(url);
+});
+const radioSystem = createRadioSystem({
+  onStationChange: (station) => hud.setRadio(station),
 });
 
 const spawnPoint = geoToWorld(
@@ -110,6 +114,7 @@ function resetGame() {
   marker.visible = true;
   trafficSystem?.reset();
   hud.setDrivingMode(false);
+  radioSystem.setDriving(false);
 }
 
 function toggleVehicle() {
@@ -123,6 +128,7 @@ function toggleVehicle() {
     player.position.copy(car.position).add(exitOffset);
     player.rotation.y = car.rotation.y;
     hud.setDrivingMode(false);
+    radioSystem.setDriving(false);
     return;
   }
 
@@ -131,6 +137,7 @@ function toggleVehicle() {
     player.visible = false;
     hud.setVehiclePrompt(false, true);
     hud.setDrivingMode(true);
+    radioSystem.setDriving(true);
     return;
   }
 
@@ -147,6 +154,7 @@ function toggleVehicle() {
     nearbyTrafficCar = null;
     hud.setVehiclePrompt(false, true);
     hud.setDrivingMode(true);
+    radioSystem.setDriving(true);
   }
 }
 
@@ -160,6 +168,14 @@ addEventListener("keydown", (event) => {
     diagnosticTime = 0;
   }
   if (event.code === "KeyE" && !event.repeat && state.gameStarted) toggleVehicle();
+  if (
+    event.code === "KeyQ" &&
+    !event.repeat &&
+    state.gameStarted &&
+    state.isDriving
+  ) {
+    radioSystem.nextStation();
+  }
   if (event.code === "KeyR") resetGame();
 });
 addEventListener("keyup", (event) => {

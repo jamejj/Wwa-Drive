@@ -38,8 +38,7 @@ export function createScene(app, performanceProfile, atmosphere) {
       vertexShader: `
         varying float vSkyHeight;
         void main() {
-          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-          vSkyHeight = normalize(worldPosition.xyz).y;
+          vSkyHeight = normalize(position).y;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
@@ -55,6 +54,12 @@ export function createScene(app, performanceProfile, atmosphere) {
     }),
   );
   sky.name = "Niebo";
+  sky.frustumCulled = false;
+  sky.renderOrder = -1000;
+  sky.material.depthTest = false;
+  sky.onBeforeRender = (_renderer, _scene, renderCamera) => {
+    sky.position.copy(renderCamera.position);
+  };
   scene.add(sky);
 
   const renderer = new THREE.WebGLRenderer({
@@ -75,6 +80,10 @@ export function createScene(app, performanceProfile, atmosphere) {
     atmosphere.exposure *
     (performanceProfile.name === "school" ? 1 : 1.08);
   app.append(renderer.domElement);
+  renderer.domElement.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    console.warn("Kontekst WebGL został chwilowo utracony.");
+  });
 
   scene.add(
     new THREE.HemisphereLight(

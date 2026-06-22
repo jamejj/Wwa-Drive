@@ -65,6 +65,12 @@ export function createHud(locations, initialLocation, onLocationChange) {
     elements.radioTrack.textContent = location.radio.track;
   }
 
+  function setRadio(radio) {
+    elements.radioStation.textContent = radio.station;
+    elements.radioShow.textContent = radio.show;
+    elements.radioTrack.textContent = radio.track;
+  }
+
   renderLocations();
   setLocation(initialLocation);
 
@@ -146,6 +152,7 @@ export function createHud(locations, initialLocation, onLocationChange) {
     setCrosshairVisible,
     pulseCrosshair,
     setLocation,
+    setRadio,
     getSelectedLocation: () => selectedLocation,
   };
 }

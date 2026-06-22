@@ -21,6 +21,7 @@ Obecny prototyp zawiera:
 - proceduralne nawierzchnie, cienie kontaktowe i więcej wyposażenia ulic,
 - system wyboru lokacji z grywalnym Centrum i kolejnymi dzielnicami w planie,
 - konfigurowalne spawny, klimat, misje, landmarki i fikcyjne WAWA FM,
+- dwie lekkie, proceduralne stacje radiowe z autorskimi instrumentalami,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -42,6 +43,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `E` — wsiadanie i wysiadanie z samochodu
 - `W/S` — gaz i hamulec podczas jazdy
 - `A/D` — skręcanie podczas jazdy
+- `Q` — zmiana stacji radiowej podczas jazdy
 - `R` — powrót na pozycję startową
 - `F3` — panel diagnostyczny wydajności
 - lewy przycisk myszy — strzał w kierunku celownika
@@ -55,6 +57,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 
 ## Struktura kodu
 
+- `src/audio` — proceduralne, fikcyjne radio samochodowe,
 - `src/core` — scena, renderer i wspólne ustawienia silnika,
 - `src/entities` — gracz, samochód i obiekty misji,
 - `src/world` — mapa Warszawy, drogi i kolizje,
