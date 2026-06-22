@@ -52,8 +52,12 @@ function createAreaGeometry(element, geoToWorld) {
   return geometry;
 }
 
-export async function createLandcover({ geoToWorld, simpleMaterials }) {
-  const response = await fetch("/warsaw-landcover.json");
+export async function createLandcover({
+  geoToWorld,
+  simpleMaterials,
+  dataFile,
+}) {
+  const response = await fetch(dataFile);
   if (!response.ok) return new THREE.Group();
   const data = await response.json();
 

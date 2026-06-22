@@ -126,8 +126,8 @@ function buildingHeight(way) {
   return 8 + (Math.abs(way.id) % 80) / 10;
 }
 
-async function fetchMapData() {
-  const localResponse = await fetch("/warsaw-center.json");
+async function fetchMapData(dataFile) {
+  const localResponse = await fetch(dataFile);
   if (localResponse.ok) return localResponse.json();
 
   const cached = localStorage.getItem(CACHE_KEY);
@@ -369,12 +369,13 @@ function addRenderChunks(group, chunks, materials) {
   }
 }
 
-export async function buildWarsawMap(performanceProfile) {
+export async function buildWarsawMap(performanceProfile, location) {
   const [data, landcover] = await Promise.all([
-    fetchMapData(),
+    fetchMapData(location.map.dataFile),
     createLandcover({
       geoToWorld,
       simpleMaterials: performanceProfile.simpleMaterials,
+      dataFile: location.map.landcoverFile,
     }),
   ]);
   const group = new THREE.Group();

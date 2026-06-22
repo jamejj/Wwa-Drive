@@ -14,6 +14,10 @@
         <span>WAWA</span>
         <strong>DRIVE</strong>
       </div>
+      <div class="location-chip">
+        <small>LOKACJA</small>
+        <strong id="location-name">CENTRUM</strong>
+      </div>
       <div class="mission">
         <small>PIERWSZY CEL</small>
         <p>Przejdź do żółtego znacznika</p>
@@ -42,16 +46,25 @@
         <span id="performance-triangles">Trójkąty: —</span>
         <span id="performance-scale">Skala: —</span>
       </div>
+      <div class="radio-widget" id="radio-widget">
+        <span class="radio-signal">●</span>
+        <div>
+          <small id="radio-show">NOCNA ZMIANA</small>
+          <strong id="radio-station">WAWA FM</strong>
+          <span id="radio-track">Sygnał testowy — centrum</span>
+        </div>
+      </div>
       <div class="attribution">Dane mapy © OpenStreetMap contributors</div>
     </div>
 
     <div class="start-screen" id="start-screen">
       <div class="start-card">
-        <p class="eyebrow">PROTOTYP 05</p>
+        <p class="eyebrow">PROTOTYP 06</p>
         <h1>WAWA<br /><span>DRIVE</span></h1>
-        <p>Mały kawałek miasta. Wielkie plany.</p>
+        <p>Wybierz rejon Warszawy.</p>
+        <div class="location-grid" id="location-grid"></div>
         <button id="start-button" disabled>WCZYTYWANIE WARSZAWY…</button>
-        <small>sterowanie: W A S D</small>
+        <small id="selected-location-description">Ładowanie lokacji…</small>
       </div>
     </div>
 

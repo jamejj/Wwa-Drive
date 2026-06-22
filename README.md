@@ -19,6 +19,8 @@ Obecny prototyp zawiera:
 - potrącanie pieszych oraz lekki ruch uliczny z zaparkowanymi autami,
 - ruch przechodzący między połączonymi ulicami i parkowanie przy krawężniku,
 - proceduralne nawierzchnie, cienie kontaktowe i więcej wyposażenia ulic,
+- system wyboru lokacji z grywalnym Centrum i kolejnymi dzielnicami w planie,
+- konfigurowalne spawny, klimat, misje, landmarki i fikcyjne WAWA FM,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -56,6 +58,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `src/core` — scena, renderer i wspólne ustawienia silnika,
 - `src/entities` — gracz, samochód i obiekty misji,
 - `src/world` — mapa Warszawy, drogi i kolizje,
+- `src/locations` — konfiguracje dzielnic, spawnów, misji i landmarków,
 - `src/ui` — interfejs gry,
 - `src/main.js` — połączenie systemów i główna pętla gry.
 

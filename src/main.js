@@ -9,24 +9,45 @@ import { createPedestrianSystem } from "./entities/createPedestrianSystem.js";
 import { createPlayer } from "./entities/createPlayer.js";
 import { createTrafficSystem } from "./entities/createTrafficSystem.js";
 import { createWeaponSystem } from "./entities/createWeaponSystem.js";
+import {
+  getRequestedLocation,
+  locations,
+} from "./locations/locationRegistry.js";
 import { createHud } from "./ui/createHud.js";
 import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
+import { createLocationLandmarks } from "./world/createLocationLandmarks.js";
 
 const performanceProfile = getPerformanceProfile();
+const activeLocation = getRequestedLocation();
 const { scene, camera, renderer, initialPixelRatio } = createScene(
   document.querySelector("#app"),
   performanceProfile,
+  activeLocation.atmosphere,
 );
 const adaptiveQuality = createAdaptiveQuality({
   renderer,
   profile: performanceProfile,
   initialPixelRatio,
 });
-const hud = createHud();
+const hud = createHud(locations, activeLocation, (location) => {
+  if (location.id === activeLocation.id) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("location", location.id);
+  window.location.assign(url);
+});
 
-const spawnPoint = geoToWorld(52.23225, 21.00335);
-const carSpawnPoint = spawnPoint.clone().add(new THREE.Vector3(2.5, 0, 0.8));
+const spawnPoint = geoToWorld(
+  activeLocation.spawn.player.lat,
+  activeLocation.spawn.player.lon,
+);
+const carSpawnPoint = spawnPoint.clone().add(
+  new THREE.Vector3(
+    activeLocation.spawn.carOffset.x,
+    0,
+    activeLocation.spawn.carOffset.z,
+  ),
+);
 
 const player = createPlayer();
 player.position.copy(spawnPoint);
@@ -34,11 +55,16 @@ scene.add(player);
 
 const car = createCar();
 car.position.copy(carSpawnPoint);
-car.rotation.y = Math.PI;
+car.rotation.y = activeLocation.spawn.carRotation;
 scene.add(car);
 
 const { marker, ring: markerRing } = createMissionMarker();
-marker.position.copy(geoToWorld(52.2352, 21.0086));
+marker.position.copy(
+  geoToWorld(
+    activeLocation.mission.target.lat,
+    activeLocation.mission.target.lon,
+  ),
+);
 scene.add(marker);
 
 const state = {
@@ -75,7 +101,7 @@ function resetGame() {
   player.position.copy(spawnPoint);
   player.visible = true;
   car.position.copy(carSpawnPoint);
-  car.rotation.y = Math.PI;
+  car.rotation.y = activeLocation.spawn.carRotation;
   car.userData.paintMaterial.color.setHex(0xc72732);
   state.carSpeed = 0;
   state.isDriving = false;
@@ -351,8 +377,9 @@ function animate(timestamp) {
 requestAnimationFrame(animate);
 
 try {
-  const map = await buildWarsawMap(performanceProfile);
+  const map = await buildWarsawMap(performanceProfile, activeLocation);
   scene.add(map.group);
+  scene.add(createLocationLandmarks(activeLocation, geoToWorld));
   buildingIndex = map.buildingIndex;
   roadIndex = map.roadIndex;
   pedestrianSystem = createPedestrianSystem({

@@ -1,4 +1,4 @@
-export function createHud() {
+export function createHud(locations, initialLocation, onLocationChange) {
   const elements = {
     startScreen: document.querySelector("#start-screen"),
     startButton: document.querySelector("#start-button"),
@@ -8,6 +8,7 @@ export function createHud() {
     speedValue: document.querySelector("#speed-value"),
     primaryControl: document.querySelector("#primary-control"),
     secondaryControl: document.querySelector("#secondary-control"),
+    missionTitle: document.querySelector(".mission small"),
     missionText: document.querySelector(".mission p"),
     performancePanel: document.querySelector("#performance-panel"),
     performanceFps: document.querySelector("#performance-fps"),
@@ -15,8 +16,57 @@ export function createHud() {
     performanceTriangles: document.querySelector("#performance-triangles"),
     performanceScale: document.querySelector("#performance-scale"),
     crosshair: document.querySelector("#crosshair"),
+    locationGrid: document.querySelector("#location-grid"),
+    selectedLocationDescription: document.querySelector(
+      "#selected-location-description",
+    ),
+    locationName: document.querySelector("#location-name"),
+    radioStation: document.querySelector("#radio-station"),
+    radioShow: document.querySelector("#radio-show"),
+    radioTrack: document.querySelector("#radio-track"),
   };
   elements.actionPromptText = elements.actionPrompt.querySelector("span");
+  let selectedLocation = initialLocation;
+
+  function renderLocations() {
+    elements.locationGrid.replaceChildren();
+    for (const location of locations) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "location-card";
+      button.disabled = !location.available;
+      button.classList.toggle("selected", location.id === selectedLocation.id);
+      button.innerHTML = `
+        <span class="location-badge">${location.badge}</span>
+        <strong>${location.name}</strong>
+        <small>${location.district}</small>
+        <p>${location.description}</p>
+      `;
+      if (location.available) {
+        button.addEventListener("click", () => {
+          selectedLocation = location;
+          renderLocations();
+          setLocation(location);
+          onLocationChange?.(location);
+        });
+      }
+      elements.locationGrid.append(button);
+    }
+  }
+
+  function setLocation(location) {
+    selectedLocation = location;
+    elements.selectedLocationDescription.textContent = location.description;
+    elements.locationName.textContent = location.name.toUpperCase();
+    elements.missionTitle.textContent = location.mission.title;
+    elements.missionText.textContent = location.mission.onFoot;
+    elements.radioStation.textContent = location.radio.station;
+    elements.radioShow.textContent = location.radio.show;
+    elements.radioTrack.textContent = location.radio.track;
+  }
+
+  renderLocations();
+  setLocation(initialLocation);
 
   function setDrivingMode(isDriving) {
     elements.speedometer.classList.toggle("visible", isDriving);
@@ -27,8 +77,8 @@ export function createHud() {
       ? "<kbd>A/D</kbd> skręcanie"
       : "<kbd>SHIFT</kbd> bieg";
     elements.missionText.textContent = isDriving
-      ? "Jedź do żółtego znacznika"
-      : "Znajdź auto i jedź do znacznika";
+      ? selectedLocation.mission.driving
+      : selectedLocation.mission.onFoot;
   }
 
   function setVehiclePrompt(visible, isDriving) {
@@ -40,7 +90,8 @@ export function createHud() {
 
   function setMapReady(statistics) {
     elements.startButton.disabled = false;
-    elements.startButton.textContent = "WEJDŹ DO CENTRUM";
+    elements.startButton.textContent =
+      `WEJDŹ: ${selectedLocation.name.toUpperCase()}`;
     console.info(
       `Mapa gotowa: ${statistics.roads} dróg, ${statistics.buildings} budynków, ` +
         `${statistics.renderChunks} sektorów i ${statistics.renderObjects} warstw.`,
@@ -94,5 +145,7 @@ export function createHud() {
     updatePerformance,
     setCrosshairVisible,
     pulseCrosshair,
+    setLocation,
+    getSelectedLocation: () => selectedLocation,
   };
 }

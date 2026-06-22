@@ -53,6 +53,27 @@ canvas.game-active {
   font-weight: 900;
 }
 
+.location-chip {
+  position: absolute;
+  top: 68px;
+  left: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.location-chip small,
+.radio-widget small {
+  color: #ffd91a;
+  font: 800 9px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.15em;
+}
+
+.location-chip strong {
+  font: 800 13px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.08em;
+}
+
 .mission {
   position: absolute;
   top: 28px;
@@ -229,6 +250,47 @@ canvas.game-active {
   letter-spacing: 0.12em;
 }
 
+.radio-widget {
+  position: absolute;
+  top: 105px;
+  right: 30px;
+  display: flex;
+  min-width: 205px;
+  padding: 10px 13px;
+  border-left: 2px solid #ffd91a;
+  background: rgb(10 11 15 / 78%);
+  align-items: center;
+  gap: 10px;
+}
+
+.radio-widget > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.radio-widget strong {
+  font: 900 16px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.radio-widget span:not(.radio-signal) {
+  color: rgb(255 255 255 / 55%);
+  font-size: 9px;
+}
+
+.radio-signal {
+  color: #ffd91a;
+  font-size: 12px;
+  animation: radio-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes radio-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .attribution {
   position: absolute;
   right: 20px;
@@ -265,7 +327,7 @@ kbd {
 }
 
 .start-card {
-  width: min(440px, calc(100vw - 40px));
+  width: min(760px, calc(100vw - 40px));
   padding: 38px;
   border: 1px solid rgb(255 255 255 / 15%);
   background: rgb(13 15 20 / 83%);
@@ -292,9 +354,73 @@ kbd {
 }
 
 .start-card > p:not(.eyebrow) {
-  margin: 32px 0 25px;
+  margin: 32px 0 18px;
   color: rgb(255 255 255 / 65%);
   font-size: 13px;
+}
+
+.location-grid {
+  display: grid;
+  margin-bottom: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  text-align: left;
+}
+
+.location-card {
+  position: relative;
+  min-height: 104px;
+  padding: 14px 15px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  color: white;
+  background: rgb(255 255 255 / 4%);
+  cursor: pointer;
+  transition: 150ms ease;
+}
+
+.location-card:hover:not(:disabled),
+.location-card.selected {
+  border-color: #ffd91a;
+  background: rgb(255 217 26 / 8%);
+  transform: translateY(-1px);
+}
+
+.location-card:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
+.location-card strong {
+  display: block;
+  font: 900 21px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.location-card small {
+  display: block;
+  margin-top: 2px;
+  color: #ffd91a;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.location-card p {
+  margin: 9px 0 0;
+  color: rgb(255 255 255 / 58%);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.location-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 5px;
+  color: #151515;
+  background: #ffd91a;
+  font: 800 8px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.1em;
 }
 
 .start-card button {
@@ -374,6 +500,11 @@ kbd {
     left: 20px;
   }
 
+  .location-chip {
+    top: 58px;
+    left: 20px;
+  }
+
   .controls {
     right: 20px;
     bottom: 18px;
@@ -387,6 +518,10 @@ kbd {
     bottom: 58px;
     width: 82px;
     height: 82px;
+  }
+
+  .radio-widget {
+    display: none;
   }
 
   .speedometer strong {
@@ -404,5 +539,11 @@ kbd {
 
   .start-card h1 {
     font-size: 65px;
+  }
+
+  .location-grid {
+    grid-template-columns: 1fr;
+    max-height: 295px;
+    overflow-y: auto;
   }
 }

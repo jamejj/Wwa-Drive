@@ -1,11 +1,11 @@
 import * as THREE from "three";
 import { createSurfaceMaterial } from "./createSurfaceMaterial.js";
 
-export function createScene(app, performanceProfile) {
+export function createScene(app, performanceProfile, atmosphere) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x9fb4bd);
+  scene.background = new THREE.Color(atmosphere.sky);
   scene.fog = new THREE.Fog(
-    0x9fb4bd,
+    atmosphere.fog,
     performanceProfile.viewDistance * 0.48,
     performanceProfile.viewDistance * 0.92,
   );
@@ -25,8 +25,15 @@ export function createScene(app, performanceProfile) {
       side: THREE.BackSide,
       depthWrite: false,
       uniforms: {
-        topColor: { value: new THREE.Color(0x648ca2) },
-        horizonColor: { value: new THREE.Color(0xc1c9c6) },
+        topColor: {
+          value: new THREE.Color(atmosphere.sky).multiplyScalar(0.72),
+        },
+        horizonColor: {
+          value: new THREE.Color(atmosphere.fog).lerp(
+            new THREE.Color(0xffffff),
+            0.25,
+          ),
+        },
       },
       vertexShader: `
         varying float vSkyHeight;
@@ -64,12 +71,20 @@ export function createScene(app, performanceProfile) {
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = performanceProfile.name === "school" ? 1 : 1.08;
+  renderer.toneMappingExposure =
+    atmosphere.exposure *
+    (performanceProfile.name === "school" ? 1 : 1.08);
   app.append(renderer.domElement);
 
-  scene.add(new THREE.HemisphereLight(0xddebf0, 0x59604f, 1.85));
+  scene.add(
+    new THREE.HemisphereLight(
+      atmosphere.hemisphereSky,
+      atmosphere.hemisphereGround,
+      1.85,
+    ),
+  );
 
-  const sun = new THREE.DirectionalLight(0xffe5bd, 2.55);
+  const sun = new THREE.DirectionalLight(atmosphere.sun, 2.55);
   sun.position.set(-95, 125, 62);
   sun.castShadow = performanceProfile.shadows;
   sun.shadow.mapSize.set(
