@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import "./style.css";
+import { createHornSystem } from "./audio/createHornSystem.js";
 import { createRadioSystem } from "./audio/createRadioSystem.js";
 import { createAdaptiveQuality } from "./core/adaptiveQuality.js";
 import { createScene } from "./core/createScene.js";
@@ -15,12 +16,17 @@ import {
   locations,
 } from "./locations/locationRegistry.js";
 import { createHud } from "./ui/createHud.js";
-import { buildWarsawMap, geoToWorld } from "./world/warsawMap.js";
+import {
+  buildWarsawMap,
+  configureGeoProjection,
+  geoToWorld,
+} from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
 import { createLocationLandmarks } from "./world/createLocationLandmarks.js";
 
 const performanceProfile = getPerformanceProfile();
 const activeLocation = getRequestedLocation();
+configureGeoProjection(activeLocation.map.center);
 const { scene, camera, renderer, initialPixelRatio } = createScene(
   document.querySelector("#app"),
   performanceProfile,
@@ -40,6 +46,7 @@ const hud = createHud(locations, activeLocation, (location) => {
 const radioSystem = createRadioSystem({
   onStationChange: (station) => hud.setRadio(station),
 });
+const hornSystem = createHornSystem();
 
 const spawnPoint = geoToWorld(
   activeLocation.spawn.player.lat,
@@ -175,6 +182,14 @@ addEventListener("keydown", (event) => {
     state.isDriving
   ) {
     radioSystem.nextStation();
+  }
+  if (
+    event.code === "KeyH" &&
+    !event.repeat &&
+    state.gameStarted &&
+    state.isDriving
+  ) {
+    hornSystem.play();
   }
   if (event.code === "KeyR") resetGame();
 });

@@ -22,6 +22,10 @@ Obecny prototyp zawiera:
 - system wyboru lokacji z grywalnym Centrum i kolejnymi dzielnicami w planie,
 - konfigurowalne spawny, klimat, misje, landmarki i fikcyjne WAWA FM,
 - dwie lekkie, proceduralne stacje radiowe z autorskimi instrumentalami,
+- grywalne Centrum, Bulwary, Pragę i Mokotów na osobnych danych OSM,
+- etykiety wybranych prawdziwych sklepów, lokali, szkół i stacji,
+- proceduralny klakson samochodowy,
+- rozróżnienie ulic, dróg serwisowych i ścieżek oraz ukrywanie tuneli,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -44,6 +48,7 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `W/S` — gaz i hamulec podczas jazdy
 - `A/D` — skręcanie podczas jazdy
 - `Q` — zmiana stacji radiowej podczas jazdy
+- `H` — klakson podczas jazdy
 - `R` — powrót na pozycję startową
 - `F3` — panel diagnostyczny wydajności
 - lewy przycisk myszy — strzał w kierunku celownika
@@ -83,4 +88,5 @@ Warstwy parków, parkingów i wody optymalizuje `npm run optimize:landcover`.
 
 ## Dane mapowe
 
-Dane mapy: © autorzy OpenStreetMap.
+Dane mapy: © autorzy OpenStreetMap. Lokalne wycinki przygotowano z regionalnego
+ekstraktu Geofabrik z 21 czerwca 2026.

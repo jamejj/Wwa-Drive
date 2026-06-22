@@ -25,6 +25,7 @@ function classify(tags) {
     tags.leisure,
     tags.amenity,
     tags.water,
+    tags.waterway,
   ].filter(Boolean);
 
   for (const [type, acceptedValues] of Object.entries(TYPES)) {

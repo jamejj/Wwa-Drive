@@ -4,19 +4,13 @@ import { createSpatialIndex } from "./collisions.js";
 import { createSurfaceMaterial } from "../core/createSurfaceMaterial.js";
 import { createFacadeMaterial } from "./createFacadeMaterial.js";
 import { createLandcover } from "./createLandcover.js";
+import { createPoiLabels } from "./createPoiLabels.js";
 import { createUrbanDetails } from "./createUrbanDetails.js";
 import { createWarsawLandmarks } from "./createWarsawLandmarks.js";
 
-const CENTER = { lat: 52.2331, lon: 21.0065 };
-const BOUNDS = {
-  south: 52.2288,
-  west: 20.9988,
-  north: 52.2374,
-  east: 21.015,
-};
-const CACHE_KEY = "wawa-drive-osm-center-v1";
-
-const metersPerLongitude = 111_320 * Math.cos((CENTER.lat * Math.PI) / 180);
+let mapCenter = { lat: 52.2331, lon: 21.0065 };
+let metersPerLongitude =
+  111_320 * Math.cos((mapCenter.lat * Math.PI) / 180);
 const metersPerLatitude = 110_540;
 const RENDER_CHUNK_SIZE = 120;
 
@@ -53,13 +47,23 @@ function createMaterials(simpleMaterials) {
       },
     }),
     pedestrianRoad: createSurfaceMaterial({
-      color: 0xa9a69d,
+      color: 0xc5beb0,
       style: "paving",
       simpleMaterials,
       extra: {
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
+      },
+    }),
+    serviceRoad: createSurfaceMaterial({
+      color: 0x575958,
+      style: "asphalt",
+      simpleMaterials,
+      extra: {
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
       },
     }),
     roadMarking: new THREE.MeshBasicMaterial({
@@ -79,10 +83,16 @@ function createMaterials(simpleMaterials) {
 
 export function geoToWorld(lat, lon) {
   return new THREE.Vector3(
-    (lon - CENTER.lon) * metersPerLongitude,
+    (lon - mapCenter.lon) * metersPerLongitude,
     0,
-    -(lat - CENTER.lat) * metersPerLatitude,
+    -(lat - mapCenter.lat) * metersPerLatitude,
   );
+}
+
+export function configureGeoProjection(center) {
+  mapCenter = center;
+  metersPerLongitude =
+    111_320 * Math.cos((mapCenter.lat * Math.PI) / 180);
 }
 
 function roadWidth(tags) {
@@ -99,11 +109,18 @@ function roadWidth(tags) {
     tertiary: 7.5,
     residential: 6.2,
     living_street: 5,
-    service: 4,
+    service: 3.2,
     pedestrian: 4,
-    footway: 1.8,
+    footway: 1.35,
+    cycleway: 1.7,
+    steps: 1.5,
+    track: 2.4,
     path: 1.4,
   };
+  const lanes = Number.parseFloat(tags.lanes);
+  if (Number.isFinite(lanes) && lanes > 0 && !tags.width) {
+    return THREE.MathUtils.clamp(lanes * 3.15, widths[tags.highway] ?? 4, 18);
+  }
   return widths[tags.highway] ?? 4.5;
 }
 
@@ -126,20 +143,46 @@ function buildingHeight(way) {
   return 8 + (Math.abs(way.id) % 80) / 10;
 }
 
-async function fetchMapData(dataFile) {
+function buildingMaterialIndex(way) {
+  const taggedColor = way.tags["building:colour"];
+  if (!/^#[\da-f]{6}$/i.test(taggedColor ?? "")) {
+    return Math.abs(way.id) % buildingPalette.length;
+  }
+  const color = Number.parseInt(taggedColor.slice(1), 16);
+  const red = (color >> 16) & 255;
+  const green = (color >> 8) & 255;
+  const blue = color & 255;
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  buildingPalette.forEach((candidate, index) => {
+    const distance =
+      (((candidate >> 16) & 255) - red) ** 2 +
+      (((candidate >> 8) & 255) - green) ** 2 +
+      ((candidate & 255) - blue) ** 2;
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+  return nearestIndex;
+}
+
+async function fetchMapData(location) {
+  const { dataFile, bounds } = location.map;
   const localResponse = await fetch(dataFile);
   if (localResponse.ok) return localResponse.json();
 
-  const cached = localStorage.getItem(CACHE_KEY);
+  const cacheKey = `wawa-drive-osm-${location.id}-v2`;
+  const cached = localStorage.getItem(cacheKey);
   if (cached) {
     try {
       return JSON.parse(cached);
     } catch {
-      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(cacheKey);
     }
   }
 
-  const bbox = `${BOUNDS.south},${BOUNDS.west},${BOUNDS.north},${BOUNDS.east}`;
+  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
   const query = `
     [out:json][timeout:30];
     (
@@ -156,7 +199,7 @@ async function fetchMapData(dataFile) {
 
   const data = await response.json();
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(cacheKey, JSON.stringify(data));
   } catch {
     // Brak cache nie blokuje gry.
   }
@@ -182,6 +225,7 @@ function getChunk(chunks, x, z) {
       edges: [],
       roads: [],
       pedestrian: [],
+      service: [],
       markings: [],
       buildings: buildingPalette.map(() => []),
     });
@@ -191,14 +235,27 @@ function getChunk(chunks, x, z) {
 
 function addRoad(chunks, detailAnchors, way) {
   if (way.tags.area === "yes" || way.tags.highway === "construction") return [];
+  if (["private", "no"].includes(way.tags.access)) return [];
+  if (
+    ["yes", "building_passage"].includes(way.tags.tunnel) ||
+    way.tags.covered === "yes" ||
+    Number(way.tags.layer ?? 0) < 0
+  ) {
+    return [];
+  }
 
   const points = way.geometry?.map((point) => geoToWorld(point.lat, point.lon));
   if (!points || points.length < 2) return [];
 
   const width = roadWidth(way.tags);
-  const isPedestrian = ["footway", "path", "pedestrian", "steps"].includes(
-    way.tags.highway,
-  );
+  const isPedestrian = [
+    "cycleway",
+    "footway",
+    "path",
+    "pedestrian",
+    "steps",
+  ].includes(way.tags.highway);
+  const isService = ["service", "track"].includes(way.tags.highway);
   const roadY = isPedestrian ? 0.018 : 0.032;
   const roadSurfaces = [];
   const hasCenterMarking =
@@ -218,7 +275,7 @@ function addRoad(chunks, detailAnchors, way) {
     const centerZ = (start.z + end.z) / 2;
     const geometryBuckets = getChunk(chunks, centerX, centerZ);
 
-    if (!isPedestrian) {
+    if (!isPedestrian && !isService) {
       geometryBuckets.edges.push(
         createRoadPlane(
           width + 2.2,
@@ -240,7 +297,9 @@ function addRoad(chunks, detailAnchors, way) {
       centerZ,
       Math.atan2(dx, dz),
     );
-    geometryBuckets[isPedestrian ? "pedestrian" : "roads"].push(roadGeometry);
+    geometryBuckets[
+      isPedestrian ? "pedestrian" : isService ? "service" : "roads"
+    ].push(roadGeometry);
 
     if (!isPedestrian) {
       const halfWidth = width / 2 + 0.6;
@@ -345,7 +404,7 @@ function createBuildingGeometry(way) {
   const collider = createBuildingCollider(way);
   return {
     geometry,
-    materialIndex: Math.abs(way.id) % buildingPalette.length,
+    materialIndex: buildingMaterialIndex(way),
     collider,
     centerX: (collider.minX + collider.maxX) / 2,
     centerZ: (collider.minZ + collider.maxZ) / 2,
@@ -359,6 +418,7 @@ function addRenderChunks(group, chunks, materials) {
 
     addMergedGeometry(chunk, geometries.edges, materials.roadEdge, 0);
     addMergedGeometry(chunk, geometries.pedestrian, materials.pedestrianRoad, 1);
+    addMergedGeometry(chunk, geometries.service, materials.serviceRoad, 1);
     addMergedGeometry(chunk, geometries.roads, materials.vehicleRoad, 2);
     addMergedGeometry(chunk, geometries.markings, materials.roadMarking, 4);
     geometries.buildings.forEach((buildingGeometries, index) => {
@@ -371,7 +431,7 @@ function addRenderChunks(group, chunks, materials) {
 
 export async function buildWarsawMap(performanceProfile, location) {
   const [data, landcover] = await Promise.all([
-    fetchMapData(location.map.dataFile),
+    fetchMapData(location),
     createLandcover({
       geoToWorld,
       simpleMaterials: performanceProfile.simpleMaterials,
@@ -379,7 +439,7 @@ export async function buildWarsawMap(performanceProfile, location) {
     }),
   ]);
   const group = new THREE.Group();
-  group.name = "Warszawa — centrum (OpenStreetMap)";
+  group.name = `Warszawa — ${location.name} (OpenStreetMap)`;
   group.add(landcover);
   const materials = createMaterials(performanceProfile.simpleMaterials);
 
@@ -405,13 +465,15 @@ export async function buildWarsawMap(performanceProfile, location) {
     buildingColliders.push(building.collider);
   }
 
-  const palacePosition = geoToWorld(52.23184, 21.0061);
-  const landmarks = createWarsawLandmarks(
-    performanceProfile.simpleMaterials,
-    palacePosition,
-  );
-  group.add(landmarks.group);
-  buildingColliders.push(...landmarks.colliders);
+  if (location.id === "centrum") {
+    const palacePosition = geoToWorld(52.23184, 21.0061);
+    const landmarks = createWarsawLandmarks(
+      performanceProfile.simpleMaterials,
+      palacePosition,
+    );
+    group.add(landmarks.group);
+    buildingColliders.push(...landmarks.colliders);
+  }
 
   const buildingIndex = createSpatialIndex(buildingColliders);
   const freeDetailAnchors = detailAnchors.filter(
@@ -428,6 +490,7 @@ export async function buildWarsawMap(performanceProfile, location) {
       profile: performanceProfile,
     }),
   );
+  group.add(createPoiLabels(data.elements, geoToWorld, performanceProfile));
   addRenderChunks(group, renderChunks, materials);
 
   return {
