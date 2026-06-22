@@ -4,6 +4,7 @@ import { createGunshotSystem } from "./audio/createGunshotSystem.js";
 import { createHornSystem } from "./audio/createHornSystem.js";
 import { createRadioSystem } from "./audio/createRadioSystem.js";
 import { createAdaptiveQuality } from "./core/adaptiveQuality.js";
+import { createCameraControls } from "./core/createCameraControls.js";
 import { createScene } from "./core/createScene.js";
 import { getPerformanceProfile } from "./core/performanceProfile.js";
 import { createCar } from "./entities/createCar.js";
@@ -40,6 +41,7 @@ const adaptiveQuality = createAdaptiveQuality({
   profile: performanceProfile,
   initialPixelRatio,
 });
+const cameraControls = createCameraControls(renderer.domElement);
 const hud = createHud(locations, activeLocation, (location) => {
   if (location.id === activeLocation.id) return;
   const url = new URL(window.location.href);
@@ -196,6 +198,7 @@ addEventListener("keydown", (event) => {
     hornSystem.play();
   }
   if (event.code === "KeyR") resetGame();
+  if (event.code === "KeyC" && !event.repeat) cameraControls.reset();
 });
 addEventListener("keyup", (event) => {
   keys[event.code] = false;
@@ -341,7 +344,7 @@ function updateCamera(delta) {
   }
 
   if (state.isDriving) {
-    cameraOffset.set(0, 5.1, -10.2).applyAxisAngle(verticalAxis, car.rotation.y);
+    cameraControls.getOffset(car.rotation.y, cameraOffset);
     targetCamera.copy(car.position).add(cameraOffset);
     camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4.5));
     cameraLookAhead.set(0, 1.15, 8).applyAxisAngle(
@@ -353,9 +356,10 @@ function updateCamera(delta) {
     return;
   }
 
-  targetCamera.set(player.position.x + 8.5, 7.2, player.position.z + 10.5);
+  cameraControls.getOffset(player.rotation.y, cameraOffset);
+  targetCamera.copy(player.position).add(cameraOffset);
   camera.position.lerp(targetCamera, 1 - Math.exp(-delta * 4));
-  camera.lookAt(player.position.x, player.position.y + 1.15, player.position.z - 1.2);
+  camera.lookAt(player.position.x, player.position.y + 1.15, player.position.z);
 }
 
 function isGameplayActive() {

@@ -52,6 +52,9 @@ Następnie otwórz adres wyświetlony w terminalu, domyślnie
 - `A/D` — skręcanie podczas jazdy
 - `Q` — zmiana stacji radiowej podczas jazdy
 - `H` — klakson podczas jazdy
+- prawy przycisk myszy + ruch — obracanie kamery
+- rolka myszy — przybliżanie i oddalanie kamery
+- `C` — wycentrowanie kamery
 - `R` — powrót na pozycję startową
 - `F3` — panel diagnostyczny wydajności
 - lewy przycisk myszy — strzał w kierunku celownika
