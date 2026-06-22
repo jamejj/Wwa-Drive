@@ -26,6 +26,24 @@ canvas.game-active {
   cursor: none;
 }
 
+.renderer-warning {
+  position: fixed;
+  left: 50%;
+  bottom: 90px;
+  z-index: 4;
+  display: none;
+  translate: -50% 0;
+  padding: 10px 16px;
+  color: #141414;
+  background: #ffd91a;
+  font: 800 12px Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.renderer-warning.visible {
+  display: block;
+}
+
 .hud {
   position: fixed;
   inset: 0;

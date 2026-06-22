@@ -80,9 +80,19 @@ export function createScene(app, performanceProfile, atmosphere) {
     atmosphere.exposure *
     (performanceProfile.name === "school" ? 1 : 1.08);
   app.append(renderer.domElement);
+  const rendererWarning = document.createElement("div");
+  rendererWarning.className = "renderer-warning";
+  rendererWarning.textContent = "Przywracanie grafiki…";
+  app.append(rendererWarning);
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
+    rendererWarning.classList.add("visible");
     console.warn("Kontekst WebGL został chwilowo utracony.");
+  });
+  renderer.domElement.addEventListener("webglcontextrestored", () => {
+    rendererWarning.classList.remove("visible");
+    renderer.resetState();
+    console.info("Grafika WebGL została przywrócona.");
   });
 
   scene.add(

@@ -256,13 +256,25 @@ function addRoad(chunks, detailAnchors, way) {
     "steps",
   ].includes(way.tags.highway);
   const isService = ["service", "track"].includes(way.tags.highway);
-  const roadY = isPedestrian ? 0.018 : 0.032;
+  const roadY =
+    (isPedestrian ? 0.018 : 0.032) + (Math.abs(way.id) % 7) * 0.00035;
   const roadSurfaces = [];
-  const hasCenterMarking =
+  const taggedLanes = Number.parseInt(way.tags.lanes, 10);
+  const laneCount = Number.isFinite(taggedLanes)
+    ? THREE.MathUtils.clamp(taggedLanes, 1, 6)
+    : ["motorway", "trunk", "primary", "secondary", "tertiary"].includes(
+          way.tags.highway,
+        )
+      ? 2
+      : 1;
+  const hasLaneMarking =
     !isPedestrian &&
-    ["motorway", "trunk", "primary", "secondary", "tertiary"].includes(
-      way.tags.highway,
-    );
+    !isService &&
+    way.tags.lane_markings !== "no" &&
+    laneCount > 1;
+  const hasEdgeMarking = ["motorway", "trunk", "primary"].includes(
+    way.tags.highway,
+  );
 
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
@@ -328,26 +340,47 @@ function addRoad(chunks, detailAnchors, way) {
         );
       }
 
-      if (hasCenterMarking && length >= 5) {
+      if (hasLaneMarking && length >= 5) {
         const dashLength = 2.7;
         const gapLength = 3.2;
         const step = dashLength + gapLength;
         const dashCount = Math.floor(length / step);
         const directionX = dx / length;
         const directionZ = dz / length;
+        const normalX = -directionZ;
+        const normalZ = directionX;
 
-        for (let dashIndex = 0; dashIndex < dashCount; dashIndex += 1) {
-          const distance = -length / 2 + step / 2 + dashIndex * step;
-          geometryBuckets.markings.push(
-            createRoadPlane(
-              0.14,
-              dashLength,
-              centerX + directionX * distance,
-              0.048,
-              centerZ + directionZ * distance,
-              Math.atan2(dx, dz),
-            ),
-          );
+        for (let separator = 1; separator < laneCount; separator += 1) {
+          const laneOffset = -width / 2 + (width / laneCount) * separator;
+          for (let dashIndex = 0; dashIndex < dashCount; dashIndex += 1) {
+            const distance = -length / 2 + step / 2 + dashIndex * step;
+            geometryBuckets.markings.push(
+              createRoadPlane(
+                0.14,
+                dashLength,
+                centerX + directionX * distance + normalX * laneOffset,
+                0.048,
+                centerZ + directionZ * distance + normalZ * laneOffset,
+                Math.atan2(dx, dz),
+              ),
+            );
+          }
+        }
+
+        if (hasEdgeMarking) {
+          for (const side of [-1, 1]) {
+            const edgeOffset = side * (width / 2 - 0.28);
+            geometryBuckets.markings.push(
+              createRoadPlane(
+                0.11,
+                length,
+                centerX + normalX * edgeOffset,
+                0.047,
+                centerZ + normalZ * edgeOffset,
+                Math.atan2(dx, dz),
+              ),
+            );
+          }
         }
       }
     }

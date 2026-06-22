@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import "./style.css";
+import { createGunshotSystem } from "./audio/createGunshotSystem.js";
 import { createHornSystem } from "./audio/createHornSystem.js";
 import { createRadioSystem } from "./audio/createRadioSystem.js";
 import { createAdaptiveQuality } from "./core/adaptiveQuality.js";
@@ -23,6 +24,8 @@ import {
 } from "./world/warsawMap.js";
 import { collidesWithBuildings, isPointOnRoad } from "./world/collisions.js";
 import { createLocationLandmarks } from "./world/createLocationLandmarks.js";
+import { createLocationStructures } from "./world/createLocationStructures.js";
+import { loadCityModels } from "./world/loadCityModels.js";
 
 const performanceProfile = getPerformanceProfile();
 const activeLocation = getRequestedLocation();
@@ -47,6 +50,7 @@ const radioSystem = createRadioSystem({
   onStationChange: (station) => hud.setRadio(station),
 });
 const hornSystem = createHornSystem();
+const gunshotSystem = createGunshotSystem();
 
 const spawnPoint = geoToWorld(
   activeLocation.spawn.player.lat,
@@ -277,6 +281,15 @@ function updateCar(delta) {
   const previousRotation = car.rotation.y;
   car.position.x += Math.sin(car.rotation.y) * state.carSpeed * delta;
   car.position.z += Math.cos(car.rotation.y) * state.carSpeed * delta;
+  if (
+    !Number.isFinite(car.position.x) ||
+    !Number.isFinite(car.position.z) ||
+    !Number.isFinite(car.rotation.y)
+  ) {
+    console.warn("Przywrócono samochód po błędnej pozycji.");
+    resetGame();
+    return;
+  }
   if (collidesWithBuildings(car.position, 1.2, buildingIndex)) {
     car.position.copy(previousPosition);
     car.rotation.y = previousRotation;
@@ -318,6 +331,15 @@ function updateGoal() {
 }
 
 function updateCamera(delta) {
+  if (
+    !Number.isFinite(camera.position.x) ||
+    !Number.isFinite(camera.position.y) ||
+    !Number.isFinite(camera.position.z)
+  ) {
+    camera.position.copy(state.isDriving ? car.position : player.position);
+    camera.position.y += 7;
+  }
+
   if (state.isDriving) {
     cameraOffset.set(0, 5.1, -10.2).applyAxisAngle(verticalAxis, car.rotation.y);
     targetCamera.copy(car.position).add(cameraOffset);
@@ -362,6 +384,7 @@ function animate(timestamp) {
 
   timer.update(timestamp);
   const delta = Math.min(timer.getDelta(), 0.05);
+  if (!Number.isFinite(delta) || delta <= 0) return;
 
   if (state.gameStarted) {
     if (state.isDriving) updateCar(delta);
@@ -411,6 +434,8 @@ try {
   const map = await buildWarsawMap(performanceProfile, activeLocation);
   scene.add(map.group);
   scene.add(createLocationLandmarks(activeLocation, geoToWorld));
+  scene.add(createLocationStructures(activeLocation, geoToWorld));
+  scene.add(await loadCityModels(activeLocation, geoToWorld));
   buildingIndex = map.buildingIndex;
   roadIndex = map.roadIndex;
   pedestrianSystem = createPedestrianSystem({
@@ -430,7 +455,10 @@ try {
     scene,
     getTargets: () => pedestrianSystem.raycastTargets,
     onNpcHit: (index) => pedestrianSystem.hitNpc(index),
-    onShot: (hit) => hud.pulseCrosshair(hit),
+    onShot: (hit) => {
+      gunshotSystem.play();
+      hud.pulseCrosshair(hit);
+    },
   });
   hud.setMapReady(map.statistics);
   console.info(

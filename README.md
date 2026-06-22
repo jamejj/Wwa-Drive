@@ -26,6 +26,9 @@ Obecny prototyp zawiera:
 - etykiety wybranych prawdziwych sklepów, lokali, szkół i stacji,
 - proceduralny klakson samochodowy,
 - rozróżnienie ulic, dróg serwisowych i ścieżek oraz ukrywanie tuneli,
+- wielopasmowe oznakowanie jezdni i lekki model Mostu Świętokrzyskiego,
+- proceduralny dźwięk wystrzału bez zewnętrznych plików audio,
+- loader GLB/GLTF przygotowany pod legalne modele miasta,
 - prosty cel misji.
 
 ## Uruchomienie
@@ -76,6 +79,8 @@ parametrem adresu: `?quality=balanced` albo `?quality=high`.
 Po aktualizacji danych OpenStreetMap można je odchudzić poleceniem
 `npm run optimize:map`.
 Warstwy parków, parkingów i wody optymalizuje `npm run optimize:landcover`.
+Research oraz zasady importowania legalnych modeli miasta opisuje
+`docs/CITY_MODEL_RESEARCH.md`.
 
 ## Plan rozwoju
 

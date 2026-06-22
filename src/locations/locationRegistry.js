@@ -132,6 +132,16 @@ export const locations = [
       },
     ],
     missions: ["przejazd-bulwarami"],
+    cityModels: [
+      {
+        name: "Most Świętokrzyski — model zewnętrzny",
+        url: "/models/city/most-swietokrzyski.glb",
+        enabled: false,
+        position: { lat: 52.24155, lon: 21.0336, y: 0 },
+        rotation: 0,
+        scale: 1,
+      },
+    ],
   },
   {
     id: "praga",
